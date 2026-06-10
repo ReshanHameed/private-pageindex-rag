@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Private PageIndex RAG — fully local, private document search.">
+    <title>{% block title %}Private PageIndex RAG{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container header-inner">
+            <a href="/" class="logo" id="nav-home">
+                <span class="logo-icon">📑</span>
+                <span class="logo-text">PageIndex <span class="logo-accent">RAG</span></span>
+            </a>
+            <div class="header-right">
+                <label class="model-picker" for="ollama-model-select">
+                    <span>Model</span>
+                    <select id="ollama-model-select" class="model-select">
+                        <option value="">Loading…</option>
+                    </select>
+                </label>
+                <span class="privacy-badge" id="privacy-badge">🔒 Fully Local</span>
+                <span class="ollama-status" id="ollama-status">⏳ Checking Ollama…</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="container main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-inner">
+            <span>Private PageIndex RAG v0.1.0</span>
+            <span>No data leaves this machine.</span>
+        </div>
+    </footer>
+
+    <script>
+        const modelSelect = document.getElementById('ollama-model-select');
+        const savedModel = localStorage.getItem('pageindex_ollama_model') || '';
+
+        function setHiddenModelInputs() {
+            const selected = modelSelect ? modelSelect.value : '';
+            document.querySelectorAll('input[data-model-input="true"]').forEach((input) => {
+                input.value = selected;
+            });
+        }
+
+        window.getSelectedOllamaModel = function () {
+            return modelSelect ? modelSelect.value : '';
+        };
+
+        window.applySelectedOllamaModelToForm = function (form) {
+            if (!form) return;
+            const input = form.querySelector('input[data-model-input="true"]');
+            if (input) input.value = window.getSelectedOllamaModel();
+        };
+
+        function populateModelSelect(models, defaultModel) {
+            if (!modelSelect) return;
+            modelSelect.innerHTML = '';
+            const names = models && models.length ? models : [defaultModel].filter(Boolean);
+            names.forEach((name) => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                modelSelect.appendChild(option);
+            });
+            const preferred = savedModel && names.includes(savedModel) ? savedModel : defaultModel;
+            if (preferred && names.includes(preferred)) {
+                modelSelect.value = preferred;
+            }
+            setHiddenModelInputs();
+        }
+
+        if (modelSelect) {
+            modelSelect.addEventListener('change', () => {
+                localStorage.setItem('pageindex_ollama_model', modelSelect.value);
+                setHiddenModelInputs();
+            });
+        }
+
+        fetch('/api/ollama-models')
+            .then(r => r.json())
+            .then(data => {
+                populateModelSelect(data.models || [], data.default_model || '');
+            })
+            .catch(() => {
+                populateModelSelect([], '');
+            });
+
+        // Check Ollama status on load
+        fetch('/api/ollama-status')
+            .then(r => r.json())
+            .then(data => {
+                const el = document.getElementById('ollama-status');
+                if (data.status === 'connected' && data.model_available) {
+                    el.textContent = '✅ Ollama: ' + data.model;
+                    el.classList.add('status-ok');
+                } else if (data.status === 'connected' && !data.model_available) {
+                    el.textContent = '⚠️ Ollama connected, model "' + data.model + '" not found';
+                    el.classList.add('status-error');
+                } else {
+                    el.textContent = '❌ Ollama: ' + (data.detail || 'unreachable');
+                    el.classList.add('status-error');
+                }
+            })
+            .catch(() => {
+                const el = document.getElementById('ollama-status');
+                el.textContent = '❌ Ollama offline';
+                el.classList.add('status-error');
+            });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

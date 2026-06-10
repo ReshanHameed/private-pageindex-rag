@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}{{ document.filename }} — Private PageIndex RAG{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" id="breadcrumb">
+    <a href="/">Documents</a>
+    <span class="sep">›</span>
+    <span>{{ document.filename }}</span>
+</nav>
+
+<div class="doc-detail-header" id="doc-detail-header">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4);">
+        <div>
+            <h1 style="margin-bottom: var(--space-2);">{{ document.filename }}</h1>
+            <div class="doc-detail-meta">
+                <span class="status-{{ document.status }}">{{ document.status }}</span>
+                {% if document.page_count %}
+                <span>{{ document.page_count }} pages</span>
+                {% endif %}
+                {% if document.created_at %}
+                <span>{{ document.created_at[:19] }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <form action="/documents/{{ document.id }}/delete" method="post" onsubmit="return confirm('Are you sure you want to delete this document?');">
+            <button type="submit" class="btn btn-secondary" style="color: var(--color-destructive); border-color: rgba(239, 68, 68, 0.3);">
+                🗑️ Delete
+            </button>
+        </form>
+    </div>
+    {% if document.error %}
+    <div class="alert alert-error" id="doc-error">{{ document.error }}</div>
+    {% endif %}
+</div>
+
+{% if document.status == 'completed' %}
+<div class="doc-layout">
+    <!-- Tree Viewer -->
+    <section class="card tree-section" id="tree-section">
+        <h2>Document Tree</h2>
+        <div class="tree-viewer" id="tree-viewer">
+            {% macro render_nodes(nodes, depth=0) %}
+            <ul class="tree-list" style="--depth: {{ depth }}">
+                {% for node in nodes %}
+                <li class="tree-node">
+                    <div class="tree-node-header">
+                        <span class="tree-id">{{ node.node_id }}</span>
+                        <span class="tree-title">{{ node.title }}</span>
+                        <span class="tree-pages">pp. {{ node.start_page }}–{{ node.end_page }}</span>
+                    </div>
+                    {% if node.summary %}
+                    <p class="tree-summary">{{ node.summary[:200] }}</p>
+                    {% endif %}
+                    {% if node.nodes %}
+                    {{ render_nodes(node.nodes, depth + 1) }}
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% endmacro %}
+            {% if tree and tree.nodes %}
+                {{ render_nodes(tree.nodes) }}
+            {% else %}
+                <p class="muted">No tree data available.</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Chat Panel -->
+    <section class="card chat-section" id="chat-section">
+        <h2>Ask a Question</h2>
+        <form action="/documents/{{ document.id }}/ask" method="post" class="chat-form" id="chat-form">
+            <input type="hidden" name="model" data-model-input="true" value="">
+            <div class="chat-input-row">
+                <input type="text" name="question" id="question-input"
+                       placeholder="What does this document say about…"
+                       required autocomplete="off" class="chat-input">
+                <button type="submit" class="btn btn-primary" id="ask-btn">Ask</button>
+            </div>
+        </form>
+
+        <div class="chat-history" id="chat-history">
+            {% if chats %}
+            {% for chat in chats %}
+            <div class="chat-message" id="chat-{{ chat.id }}">
+                <div class="chat-question">
+                    <span class="chat-role">Q:</span>
+                    <span>{{ chat.question }}</span>
+                </div>
+                <div class="chat-answer">
+                    <span class="chat-role">A:</span>
+                    <span>{{ chat.answer }}</span>
+                </div>
+                <a href="/documents/{{ document.id }}/chats/{{ chat.id }}/trace"
+                   class="trace-link" id="trace-{{ chat.id }}">View retrieval trace →</a>
+            </div>
+            {% endfor %}
+            {% else %}
+            <p class="muted" id="no-chats">No questions asked yet.</p>
+            {% endif %}
+        </div>
+    </section>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const chatForm = document.getElementById('chat-form');
+    const askBtn = document.getElementById('ask-btn');
+    if (chatForm) {
+        chatForm.addEventListener('submit', () => {
+            window.applySelectedOllamaModelToForm(chatForm);
+            askBtn.textContent = 'Thinking…';
+            askBtn.disabled = true;
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,41 @@
+# Python virtual environment
+.venv/
+
+# Local temporary/runtime directories
+.tmp/
+test_tmp/
+test_runtime/
+
+# Python caching & build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+pytest-cache-files-*/
+
+# Local databases and uploaded data
+data/
+graphify-out/
+
+# Local configuration overrides (never commit secrets)
+.env
+.env.local
+.env.*.local
+
+# Node dependencies
+node_modules/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE configurations
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

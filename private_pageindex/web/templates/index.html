@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Documents — Private PageIndex RAG{% endblock %}
+
+{% block content %}
+<section class="hero" id="hero-section">
+    <h1>Private Document Search</h1>
+    <p class="hero-subtitle">Upload a text PDF, build a local PageIndex tree, and ask questions — all on your machine.</p>
+</section>
+
+<section class="upload-section" id="upload-section">
+    <div class="card upload-card">
+        <h2>Upload PDF</h2>
+        <form action="/upload" method="post" enctype="multipart/form-data" class="upload-form" id="upload-form">
+            <input type="hidden" name="model" data-model-input="true" value="">
+            <label for="file-input" class="file-label" id="file-label">
+                <span class="file-icon">📄</span>
+                <span class="file-text">Choose a text PDF or drag it here</span>
+            </label>
+            <input type="file" name="file" id="file-input" accept=".pdf" required class="file-input">
+            <button type="submit" class="btn btn-primary" id="upload-btn">Upload &amp; Index</button>
+        </form>
+    </div>
+</section>
+
+<section class="documents-section" id="documents-section">
+    <h2>Documents</h2>
+    {% if documents %}
+    <div class="documents-grid">
+        {% for doc in documents %}
+        <div class="card document-card" id="doc-{{ doc.id }}" data-doc-id="{{ doc.id }}" data-doc-status="{{ doc.status }}">
+            <div class="doc-header">
+                <div class="doc-header-left">
+                    <span class="doc-icon">
+                        {% if doc.status == 'completed' %}📗
+                        {% elif doc.status == 'processing' %}⏳
+                        {% else %}❌{% endif %}
+                    </span>
+                    <span class="doc-status status-{{ doc.status }}">{{ doc.status }}</span>
+                </div>
+                <form action="/documents/{{ doc.id }}/delete" method="post" class="delete-form" onsubmit="return confirm('Are you sure you want to delete this document?');">
+                    <button type="submit" class="btn-icon delete-btn" title="Delete document">🗑️</button>
+                </form>
+            </div>
+            <h3 class="doc-filename">
+                <a href="/documents/{{ doc.id }}" class="stretched-link">{{ doc.filename }}</a>
+            </h3>
+            <div class="doc-meta">
+                {% if doc.page_count %}
+                <span>{{ doc.page_count }} pages</span>
+                {% endif %}
+                {% if doc.created_at %}
+                <span>{{ doc.created_at[:10] }}</span>
+                {% endif %}
+            </div>
+            {% if doc.status == 'processing' %}
+            <div class="index-progress" id="progress-{{ doc.id }}">
+                <div class="progress-row">
+                    <span class="progress-stage">{{ doc.progress_stage or 'queued' }}</span>
+                    <span class="progress-timer" data-started-at="{{ doc.started_at or doc.created_at }}">0s</span>
+                </div>
+                <div class="progress-track" aria-label="Indexing progress">
+                    <div class="progress-bar" style="width: {{ doc.progress_percent or 0 }}%"></div>
+                </div>
+                <div class="progress-percent">{{ doc.progress_percent or 0 }}%</div>
+            </div>
+            {% endif %}
+            {% if doc.error %}
+            <p class="doc-error">{{ doc.error }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state" id="empty-state">
+        <span class="empty-icon">📂</span>
+        <p>No documents yet. Upload a PDF to get started.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // File input UX
+    const fileInput = document.getElementById('file-input');
+    const fileLabel = document.getElementById('file-label');
+    const fileText = fileLabel.querySelector('.file-text');
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            fileText.textContent = fileInput.files[0].name;
+            fileLabel.classList.add('file-selected');
+        }
+    });
+
+    // Upload progress
+    const uploadForm = document.getElementById('upload-form');
+    const uploadBtn = document.getElementById('upload-btn');
+    uploadForm.addEventListener('submit', () => {
+        window.applySelectedOllamaModelToForm(uploadForm);
+        uploadBtn.textContent = 'Indexing…';
+        uploadBtn.disabled = true;
+    });
+
+    function formatElapsed(seconds) {
+        if (seconds < 60) return seconds + 's';
+        const minutes = Math.floor(seconds / 60);
+        const rest = seconds % 60;
+        return minutes + 'm ' + String(rest).padStart(2, '0') + 's';
+    }
+
+    function updateProgressCard(docId, data) {
+        const card = document.querySelector('[data-doc-id="' + docId + '"]');
+        if (!card) return false;
+        const status = card.querySelector('.doc-status');
+        if (status) {
+            status.textContent = data.status;
+            status.className = 'doc-status status-' + data.status;
+        }
+        const progress = card.querySelector('.index-progress');
+        if (progress) {
+            const bar = progress.querySelector('.progress-bar');
+            const stage = progress.querySelector('.progress-stage');
+            const timer = progress.querySelector('.progress-timer');
+            const percent = progress.querySelector('.progress-percent');
+            const progressValue = data.progress_percent || 0;
+            if (bar) bar.style.width = progressValue + '%';
+            if (stage) stage.textContent = data.progress_stage || data.status;
+            if (timer) timer.textContent = formatElapsed(data.elapsed_seconds || 0);
+            if (percent) percent.textContent = progressValue + '%';
+        }
+        if (data.error) {
+            let error = card.querySelector('.doc-error');
+            if (!error) {
+                error = document.createElement('p');
+                error.className = 'doc-error';
+                card.appendChild(error);
+            }
+            error.textContent = data.error;
+        }
+        card.dataset.docStatus = data.status;
+        return data.status === 'processing';
+    }
+
+    const processingCards = Array.from(document.querySelectorAll('[data-doc-status="processing"]'));
+    if (processingCards.length > 0) {
+        const poll = setInterval(() => {
+            const activeCards = Array.from(document.querySelectorAll('[data-doc-status="processing"]'));
+            if (activeCards.length === 0) {
+                clearInterval(poll);
+                return;
+            }
+            activeCards.forEach((card) => {
+                const docId = card.dataset.docId;
+                fetch('/api/documents/' + docId + '/status')
+                    .then(r => r.json())
+                    .then(data => updateProgressCard(docId, data))
+                    .catch(() => {});
+            });
+        }, 1000);
+    }
+</script>
+{% endblock %}

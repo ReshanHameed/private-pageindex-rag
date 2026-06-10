@@ -1,0 +1,280 @@
+@import "tailwindcss";
+
+/* -------------------------------------------------------------------------- */
+/* 1. Self-Hosted Fonts                                                      */
+/* -------------------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('/fonts/SpaceGrotesk-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  src: url('/fonts/SpaceGrotesk-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Sans';
+  src: url('/fonts/Geist-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Sans';
+  src: url('/fonts/Geist-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* -------------------------------------------------------------------------- */
+/* 2. Tailwind v4 Theme Tokens                                                */
+/* -------------------------------------------------------------------------- */
+
+@theme {
+  /* System Colors */
+  --color-bg-void: #0C0C0E;
+  --color-bg-surface: #141417;
+  --color-bg-elevated: #1C1C21;
+  --color-bg-interactive: #242429;
+  
+  --color-border-dim: #2A2A30;
+  --color-border-default: #3A3A42;
+  --color-border-bright: #4A4A55;
+  
+  --color-text-primary: #E4E4E8;
+  --color-text-secondary: #8A8A96;
+  --color-text-tertiary: #5A5A66;
+  --color-text-inverse: #0C0C0E;
+  
+  /* Accent Color - Mineral Teal */
+  --color-accent: #2DD4A8;
+  --color-accent-dim: #1FAF8A;
+  --color-accent-ghost: rgba(45, 212, 168, 0.08);
+  --color-accent-glow: rgba(45, 212, 168, 0.20);
+  
+  /* Semantic Status Colors */
+  --color-info: #22D3EE;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-success: #2DD4A8;
+
+  /* Sidebar Colors */
+  --color-sidebar: var(--color-bg-surface);
+  --color-sidebar-foreground: var(--color-text-secondary);
+  --color-sidebar-primary: var(--color-accent);
+  --color-sidebar-primary-foreground: var(--color-text-inverse);
+  --color-sidebar-accent: var(--color-bg-interactive);
+  --color-sidebar-accent-foreground: var(--color-text-primary);
+  --color-sidebar-border: var(--color-border-dim);
+  --color-sidebar-ring: var(--color-accent-ghost);
+  
+  /* Typography Families */
+  --font-sans: "Geist Sans", sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  /* Sharp Corners Principle */
+  --radius-none: 0px;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+
+  /* Z-Index Scale (design.md §5) */
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-sidebar: 20;
+  --z-dropdown: 30;
+  --z-modal: 40;
+  --z-toast: 50;
+  --z-cursor: 100;
+  --z-loading: 1000;
+
+  /* Spacing Scale */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+
+  /* Type Scale (ratio ~1.125-1.2) */
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 2rem;
+  --text-3xl: 2.75rem;
+
+  /* Transition Durations */
+  --duration-instant: 100ms;
+  --duration-fast: 200ms;
+  --duration-normal: 300ms;
+  --duration-slow: 500ms;
+
+  /* Page entrance animation */
+  --animate-fade-in: fade-in 0.4s ease-out both;
+  
+  /* Graph Node Animations */
+  --animate-trace-pulse: trace-pulse 1.5s ease-in-out infinite;
+}
+
+/* -------------------------------------------------------------------------- */
+/* 3. Base Styles & Global Resets                                            */
+/* -------------------------------------------------------------------------- */
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: var(--color-border-dim);
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-default) var(--color-bg-void);
+  }
+
+  body {
+    background-color: var(--color-bg-void);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    color: var(--color-text-primary);
+    letter-spacing: -0.02em;
+  }
+
+  /* Monospace figures and codes */
+  code, pre, .mono-data {
+    font-family: var(--font-mono);
+    font-feature-settings: "tnum"; /* Tabular numbers */
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* 3b. Component Utilities                                                    */
+/* -------------------------------------------------------------------------- */
+
+@layer components {
+  /* Focus ring - consistent accessible focus indicator */
+  .focus-ring {
+    outline: none;
+  }
+  .focus-ring:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* Hover lift - subtle interactive feedback */
+  .hover-lift {
+    transition: transform var(--duration-fast) cubic-bezier(0.16, 1, 0.3, 1),
+                border-color var(--duration-fast) ease;
+  }
+  .hover-lift:hover {
+    transform: translateY(-1px);
+  }
+  .hover-lift:active {
+    transform: translateY(0px);
+  }
+}
+
+/* Fade-in keyframe for page entrance */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Skeleton shimmer for loading states (design rule: skeletons, not spinners) */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-interactive) 25%,
+    var(--color-bg-elevated) 50%,
+    var(--color-bg-interactive) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Graph Node Glow Animation */
+@keyframes trace-pulse {
+  0% {
+    filter: drop-shadow(0 0 4px var(--color-accent));
+    opacity: 0.8;
+  }
+  50% {
+    filter: drop-shadow(0 0 16px var(--color-accent));
+    opacity: 1;
+  }
+  100% {
+    filter: drop-shadow(0 0 4px var(--color-accent));
+    opacity: 0.8;
+  }
+}
+
+/* Respect prefers-reduced-motion for CSS animations */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Custom Scrollbar for Terminal Scholar theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg-void);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border-radius: 0px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-bright);
+}

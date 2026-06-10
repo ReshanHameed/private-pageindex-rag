@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Retrieval Trace — Private PageIndex RAG{% endblock %}
+
+{% block content %}
+<nav class="breadcrumb" id="breadcrumb">
+    <a href="/">Documents</a>
+    <span class="sep">›</span>
+    <a href="/documents/{{ document.id }}">{{ document.filename }}</a>
+    <span class="sep">›</span>
+    <span>Retrieval Trace</span>
+</nav>
+
+<div class="trace-header" id="trace-header">
+    <h1>Retrieval Trace</h1>
+    <p class="muted">Chat ID: {{ chat_id }}</p>
+</div>
+
+<section class="trace-timeline" id="trace-timeline">
+    {% if steps %}
+    {% for step in steps %}
+    <div class="trace-step" id="step-{{ step.step_index }}">
+        <div class="trace-step-marker">
+            <span class="step-number">{{ step.step_index + 1 }}</span>
+            <span class="step-line"></span>
+        </div>
+        <div class="trace-step-content card">
+            <div class="trace-step-header">
+                <span class="trace-action trace-action-{{ step.action }}">{{ step.action }}</span>
+                {% if step.node_id %}
+                <span class="trace-node">Node: {{ step.node_id }}</span>
+                {% endif %}
+                {% if step.pages %}
+                <span class="trace-pages">Pages: {{ step.pages }}</span>
+                {% endif %}
+            </div>
+            <p class="trace-reason">{{ step.reason }}</p>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state" id="no-trace">
+        <span class="empty-icon">🔍</span>
+        <p>No trace steps recorded for this chat.</p>
+    </div>
+    {% endif %}
+</section>
+
+<div class="trace-back">
+    <a href="/documents/{{ document.id }}" class="btn btn-secondary" id="back-btn">← Back to Document</a>
+</div>
+{% endblock %}
