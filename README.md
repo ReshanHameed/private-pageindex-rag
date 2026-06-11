@@ -1,10 +1,24 @@
-# 🕸️ Private PageIndex RAG
+<div align="center">
+
+```
+ ██████╗  █████╗  ██████╗ ███████╗   ██╗███╗   ██╗██████╗ ███████╗██╗  ██╗   ██████╗  █████╗  ██████╗ 
+ ██╔══██╗██╔══██╗██╔════╝ ██╔════╝   ██║████╗  ██║██╔══██╗██╔════╝╚██╗██╔╝   ██╔══██╗██╔══██╗██╔════╝ 
+ ██████╔╝███████║██║  ███╗█████╗     ██║██╔██╗ ██║██║  ██║█████╗   ╚███╔╝    ██████╔╝███████║██║  ███╗
+ ██╔═══╝ ██╔══██║██║   ██║██╔══╝     ██║██║╚██╗██║██║  ██║██╔══╝   ██╔██╗    ██╔══██╗██╔══██║██║   ██║
+ ██║     ██║  ██║╚██████╔╝███████╗   ██║██║ ╚████║██████╔╝███████╗██╔╝ ██╗   ██║  ██║██║  ██║╚██████╔╝
+ ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚══════╝   ╚═╝╚═╝  ╚═══╝╚═════╝ ╚══════╝╚═╝  ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ 
+```
+
+### **PRIVATE PAGEINDEX RAG**
+*Local-first document indexing and intelligence console*
 
 [![CI Tests](https://github.com/ReshanHameed/private-pageindex-rag/actions/workflows/tests.yml/badge.svg)](https://github.com/ReshanHameed/private-pageindex-rag/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python: 3.13+](https://img.shields.io/badge/python-3.13%2B-blue.svg)](https://www.python.org/downloads/)
 [![React: 19](https://img.shields.io/badge/react-19-blue.svg?logo=react)](https://react.dev)
 [![Tailwind CSS: v4](https://img.shields.io/badge/tailwind-v4-38bdf8.svg?logo=tailwind-css)](https://tailwindcss.com)
+
+</div>
 
 A fully private, local-first RAG (Retrieval-Augmented Generation) system for selectable-text PDFs. 
 
@@ -50,13 +64,40 @@ We built **Private PageIndex RAG**, a local-first system that replaces vector se
 
 ## 📷 Screenshots & Demo
 
-*(This section is a placeholder for contributors to upload screenshots and demo GIFs showing the circular knowledge graph, live RAG tracing animations, and conversational interface.)*
+### 🖥️ Loading Screen
+The terminal-themed boot sequence with the ASCII art "PAGEINDEX" branding.
 
-<!-- Add screenshots here:
-![Dashboard Page](docs/screenshots/dashboard.png)
-![Knowledge Graph UI](docs/screenshots/graph_ui.png)
-![Live Citation Tracing](docs/screenshots/tracing.gif)
--->
+![Loading Screen](docs/screenshots/Loading%20Screen.png)
+
+### 📂 Dashboard — Local Workspace Console
+Upload PDFs via drag & drop, view indexed documents with page counts and processing times.
+
+![Dashboard](docs/screenshots/Dashboard.png)
+
+### 🕸️ Spatial Knowledge Graph + Chat
+Interactive D3 force-directed graph visualization of the document structure with the conversational RAG chat panel.
+
+![Knowledge Graph UI](docs/screenshots/Graph%20ui.png)
+
+### 🔍 Graph Tracing — Live Citation Animation
+Watch the LLM traverse the document tree in real-time, highlighting selected nodes and fetched page ranges on the graph.
+
+![Graph Tracing](docs/screenshots/Graph%20Tracing%201.png)
+
+### 🔎 Graph Tracing — Zoomed View
+A zoomed-in view of the knowledge graph during active retrieval, showing node labels, page ranges, and the active selection path.
+
+![Graph Tracing Zoomed](docs/screenshots/Graph%20Tracing%20Zoomed.png)
+
+### 📊 Retrieval Trace Debugger
+The step-by-step timeline view of the RAG retrieval pipeline: `INSPECT_TREE` → `SELECT_NODES` → `FETCH_PAGES`, with node IDs and page ranges.
+
+![Retrieval Trace UI](docs/screenshots/Retrievel%20Trace%20ui.png)
+
+### 🎬 Live Demo — Graph Tracing in Action
+Animated GIF showing the full RAG tracing flow with real-time graph node highlighting and answer streaming.
+
+![Graph Tracing Demo](docs/screenshots/Graph%20Tracing.gif)
 
 ---
 
