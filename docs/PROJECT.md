@@ -4,7 +4,7 @@ Recommended project name: `private-pageindex-rag`
 
 This repository is a private, local-first PageIndex-style RAG prototype for text-based PDFs. It indexes selectable-text PDFs on the local machine, builds a local document tree, stores document artifacts in SQLite and the filesystem, and uses a local Ollama server for retrieval decisions and answer generation.
 
-For a detailed analysis of how this project compares to Traditional RAG, the exact problems it solves, and performance/cost metrics, see [docs/PROBLEM_SOLVED.md](file:///d:/Projects/private-pageindex-rag/docs/PROBLEM_SOLVED.md).
+For a detailed analysis of how this project compares to Traditional RAG, the exact problems it solves, and performance/cost metrics, see [PROBLEM_SOLVED.md](PROBLEM_SOLVED.md).
 
 The project is not a PageIndex Cloud integration and does not call hosted model providers for inference. The intended LLM runtime is the local Ollama API at `http://localhost:11434`.
 

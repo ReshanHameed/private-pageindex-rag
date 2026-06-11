@@ -2,14 +2,27 @@
 
 ```text
 private-pageindex-rag/
+  .github/
+    workflows/
+      tests.yml
+    ISSUE_TEMPLATE/
+      bug_report.md
+      feature_request.md
+    PULL_REQUEST_TEMPLATE.md
   README.md
   pyproject.toml
   LICENSE
   CONTRIBUTING.md
+  CODE_OF_CONDUCT.md
+  SECURITY.md
+  CHANGELOG.md
   .env.example
   .gitignore
+  Dockerfile
+  docker-compose.yml
   docs/
     ARCHITECTURE.md
+    DESIGN.md
     PROJECT.md
     STRUCTURE.md
     TROUBLESHOOTING.md
@@ -20,11 +33,11 @@ private-pageindex-rag/
     package.json
     vite.config.ts
     tsconfig.json
-    tailwind.config.ts
     components.json
     public/
       fonts/
-      logo.svg
+      favicon.svg
+      icons.svg
     src/
       App.tsx
       main.tsx
@@ -39,11 +52,16 @@ private-pageindex-rag/
     cli.py
     __main__.py
     indexing/
+      entity_extraction.py
+      heading_detection.py
       tree_builder.py
+      tree_postprocessing.py
+      tree_validation.py
     ingest/
       pdf_text.py
       pipeline.py
     llm/
+      base.py
       ollama.py
     retrieval/
       answering.py

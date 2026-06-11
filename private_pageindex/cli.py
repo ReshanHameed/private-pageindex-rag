@@ -39,7 +39,9 @@ def main(argv: list[str] | None = None) -> None:
     ask_parser.add_argument("question", type=str, help="The question to ask.")
 
     # serve
-    subparsers.add_parser("serve", help="Start the local web server.")
+    serve_parser = subparsers.add_parser("serve", help="Start the local web server.")
+    serve_parser.add_argument("--host", type=str, default=None, help="Host address to bind to.")
+    serve_parser.add_argument("--port", type=int, default=None, help="Port to bind to.")
 
     args = parser.parse_args(argv)
 
@@ -48,7 +50,7 @@ def main(argv: list[str] | None = None) -> None:
     elif args.command == "ask":
         _cmd_ask(args.doc_id, args.question)
     elif args.command == "serve":
-        _cmd_serve()
+        _cmd_serve(args.host, args.port)
 
 
 def _cmd_ingest(pdf_path: str) -> None:
@@ -135,21 +137,30 @@ def _cmd_ask(doc_id: str, question: str) -> None:
     print(f"Chat ID: {chat.id}")
 
 
-def _cmd_serve() -> None:
+def _cmd_serve(host: str | None = None, port: int | None = None) -> None:
     """Start the local web server."""
+    import os
     import uvicorn
 
     settings = get_settings()
-    print(f"Starting Private PageIndex RAG on http://127.0.0.1:8000")
+    srv_host = host or os.environ.get("HOST", "127.0.0.1")
+    try:
+        srv_port = port or int(os.environ.get("PORT", "8000"))
+    except ValueError:
+        srv_port = 8000
+
+    print(f"Starting Private PageIndex RAG on http://{srv_host}:{srv_port}")
     print(f"Ollama endpoint: {settings.ollama_base_url}")
     print(f"Model: {settings.ollama_model}")
     print(f"Data directory: {settings.data_dir}")
     print()
+
+    is_docker = os.environ.get("DOCKER_ENV") == "true"
     uvicorn.run(
         "private_pageindex.web.app:app",
-        host="127.0.0.1",
-        port=8000,
-        reload=True,
+        host=srv_host,
+        port=srv_port,
+        reload=not is_docker,
     )
 
 

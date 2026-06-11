@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: private-pageindex-rag
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DATA_DIR=/app/data
+      # Connect to Ollama running on your host machine.
+      # Docker Desktop on Windows/macOS maps host.docker.internal to the host.
+      # For Linux, we add the extra_hosts mapping below.
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=gemma4:e4b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
