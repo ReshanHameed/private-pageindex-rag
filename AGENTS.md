@@ -5,7 +5,7 @@ This repository is intended to be worked on by AI coding agents. Read this file 
 ## Project Identity
 
 - Project name: `private-pageindex-rag`.
-- Current workspace folder: `D:\Projects\private-pageindex-rag`.
+- Current workspace folder: (repository root).
 - Purpose: private, local-first PageIndex-style RAG for selectable-text PDFs.
 - Runtime boundary: local filesystem, SQLite, FastAPI, PyMuPDF, and local Ollama only.
 - Do not introduce PageIndex Cloud, OpenAI, Anthropic, hosted MCP servers, hosted inference APIs, vector databases, OCR, or cloud deployment unless the user explicitly asks for that direction.
@@ -33,12 +33,23 @@ This repository is intended to be worked on by AI coding agents. Read this file 
 
 ## Common Commands
 
+### Windows (PowerShell)
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -v
 .\.venv\Scripts\python.exe -m pytest tests/test_tree_builder.py -v
 .\.venv\Scripts\python.exe -m pytest tests/test_web_app.py tests/test_cli.py -v
 .\.venv\Scripts\python.exe -m uvicorn private_pageindex.web.app:app --reload --host 127.0.0.1 --port 8000
 .\.venv\Scripts\python.exe -m private_pageindex.cli serve
+```
+
+### Linux/macOS (bash)
+```bash
+source .venv/bin/activate
+python -m pytest -v
+python -m pytest tests/test_tree_builder.py -v
+python -m pytest tests/test_web_app.py tests/test_cli.py -v
+python -m uvicorn private_pageindex.web.app:app --reload --host 127.0.0.1 --port 8000
+python -m private_pageindex.cli serve
 ```
 
 ## Memory Update Rule

@@ -27,27 +27,45 @@ To make modifications, you will need to set up both the Python backend and Vite/
 ### 1. Backend Setup
 1. Clone your fork of the repository and navigate to the project directory.
 2. Initialize the Python virtual environment:
-   ```powershell
-   python -m venv .venv
-   .\.venv\Scripts\python.exe -m pip install -e .[dev]
-   ```
+   *   **Windows (PowerShell)**:
+       ```powershell
+       python -m venv .venv
+       .\.venv\Scripts\python.exe -m pip install -e .[dev]
+       ```
+   *   **Linux/macOS (bash)**:
+       ```bash
+       python -m venv .venv
+       source .venv/bin/activate
+       pip install -e .[dev]
+       ```
 3. Copy the template settings file:
-   ```powershell
-   copy .env.example .env
-   ```
+   *   **Windows (PowerShell)**:
+       ```powershell
+       copy .env.example .env
+       ```
+   *   **Linux/macOS (bash)**:
+       ```bash
+       cp .env.example .env
+       ```
 4. Start the FastAPI backend server:
-   ```powershell
-   .\.venv\Scripts\python.exe -m uvicorn private_pageindex.web.app:app --reload --host 127.0.0.1 --port 8000
-   ```
+   *   **Windows (PowerShell)**:
+       ```powershell
+       .\.venv\Scripts\python.exe -m uvicorn private_pageindex.web.app:app --reload --host 127.0.0.1 --port 8000
+       ```
+   *   **Linux/macOS (bash)**:
+       ```bash
+       source .venv/bin/activate
+       python -m uvicorn private_pageindex.web.app:app --reload --host 127.0.0.1 --port 8000
+       ```
 
 ### 2. Frontend Setup
 1. Open a separate terminal, navigate to the `frontend/` directory, and install dependencies:
-   ```powershell
+   ```bash
    cd frontend
    npm install
    ```
 2. Start the Vite development server:
-   ```powershell
+   ```bash
    npm run dev
    ```
 3. Open your browser to **http://localhost:5173**. All API requests will be proxied automatically to the backend on port 8000.
@@ -60,19 +78,26 @@ Before submitting any pull requests, you must ensure that all code compiles, lin
 
 ### Backend Tests
 The backend uses `pytest` for test automation. Run the full test suite (expecting 116 tests to pass):
-```powershell
-.\.venv\Scripts\python.exe -m pytest -v
-```
+
+*   **Windows (PowerShell)**:
+    ```powershell
+    .\.venv\Scripts\python.exe -m pytest -v
+    ```
+*   **Linux/macOS (bash)**:
+    ```bash
+    source .venv/bin/activate
+    python -m pytest -v
+    ```
 If you modify tree-building schemas or storage layouts, write accompanying tests in the `tests/` directory.
 
 ### Frontend Linting & Compilation
 Check the frontend codebase for TypeScript errors and ESLint rule compliance:
-```powershell
+```bash
 cd frontend
 npm run lint
 ```
 Verify that the production compilation completes successfully without bundle errors:
-```powershell
+```bash
 npm run build
 ```
 
@@ -80,17 +105,22 @@ npm run build
 
 ## 📥 Submission Process
 
-1. **Fork** the repository and create a descriptive feature branch (e.g., `feature/circular-layout-zoom`).
-2. Implement your changes, following the existing module architecture.
-3. Ensure all backend tests pass and the frontend compiles/lints cleanly.
-4. **Commit** your changes with clear, descriptive commit messages.
-5. Push your branch to your fork and submit a **Pull Request** to the main repository.
+1. Read and adhere to the [Code of Conduct](CODE_OF_CONDUCT.md).
+2. **Fork** the repository and create a descriptive feature branch (e.g., `feature/circular-layout-zoom`).
+3. Implement your changes, following the existing module architecture.
+4. Ensure all backend tests pass and the frontend compiles/lints cleanly.
+5. **Commit** your changes with clear, descriptive commit messages following standard conventions:
+   - `feat: ...` for new features
+   - `fix: ...` for bug fixes
+   - `docs: ...` for documentation updates
+   - `test: ...` for adding/fixing tests
+6. Push your branch to your fork and submit a **Pull Request** to the main repository.
 
 ---
 
 ## 📚 Reference Documentation
 For a deeper dive into the system modules, design aesthetics, and database schemas:
-*   [README.md](file:///d:/Projects/private-pageindex-rag/README.md): Quick-start and CLI commands.
-*   [docs/ARCHITECTURE.md](file:///d:/Projects/private-pageindex-rag/docs/ARCHITECTURE.md): System data flows and SQLite schemas.
-*   [design.md](file:///d:/Projects/private-pageindex-rag/design.md): Typography, colors, and layout specs.
-*   [docs/TROUBLESHOOTING.md](file:///d:/Projects/private-pageindex-rag/docs/TROUBLESHOOTING.md): Error recovery guides and environment fixes.
+*   [README.md](README.md): Quick-start and CLI commands.
+*   [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): System data flows and SQLite schemas.
+*   [docs/DESIGN.md](docs/DESIGN.md): Typography, colors, and layout specs.
+*   [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md): Error recovery guides and environment fixes.

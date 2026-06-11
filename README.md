@@ -1,5 +1,11 @@
 # 🕸️ Private PageIndex RAG
 
+[![CI Tests](https://github.com/ReshanHameed/private-pageindex-rag/actions/workflows/tests.yml/badge.svg)](https://github.com/ReshanHameed/private-pageindex-rag/actions/workflows/tests.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python: 3.13+](https://img.shields.io/badge/python-3.13%2B-blue.svg)](https://www.python.org/downloads/)
+[![React: 19](https://img.shields.io/badge/react-19-blue.svg?logo=react)](https://react.dev)
+[![Tailwind CSS: v4](https://img.shields.io/badge/tailwind-v4-38bdf8.svg?logo=tailwind-css)](https://tailwindcss.com)
+
 A fully private, local-first RAG (Retrieval-Augmented Generation) system for selectable-text PDFs. 
 
 Using PageIndex-style document tree indexing and local Ollama models, this project retrieves relevant document sections and streams answers with live citation tracing. **Zero data leaves your machine.**
@@ -42,6 +48,18 @@ We built **Private PageIndex RAG**, a local-first system that replaces vector se
 
 ---
 
+## 📷 Screenshots & Demo
+
+*(This section is a placeholder for contributors to upload screenshots and demo GIFs showing the circular knowledge graph, live RAG tracing animations, and conversational interface.)*
+
+<!-- Add screenshots here:
+![Dashboard Page](docs/screenshots/dashboard.png)
+![Knowledge Graph UI](docs/screenshots/graph_ui.png)
+![Live Citation Tracing](docs/screenshots/tracing.gif)
+-->
+
+---
+
 ## 📦 Project Architecture
 
 ```text
@@ -56,7 +74,7 @@ We built **Private PageIndex RAG**, a local-first system that replaces vector se
   └──────────┘      └─────────────┘      └───────────────┘
 ```
 
-For detailed module-level architecture, see [docs/ARCHITECTURE.md](file:///d:/Projects/private-pageindex-rag/docs/ARCHITECTURE.md).
+For detailed module-level architecture, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
@@ -89,14 +107,20 @@ Before getting started, make sure you have the following installed:
 *   **Ollama**: Installed and running locally.
 
 ### Ollama Setup
-1. Download Ollama for Windows from [ollama.com](https://ollama.com/download/windows).
+1. Download Ollama for your OS from [ollama.com](https://ollama.com).
 2. Start Ollama and verify it is running on the default port (`11434`):
-   ```powershell
-   ollama --version
-   ollama list
-   ```
+   *   **Windows (PowerShell)**:
+       ```powershell
+       ollama --version
+       ollama list
+       ```
+   *   **Linux/macOS (bash)**:
+       ```bash
+       ollama --version
+       ollama list
+       ```
 3. Pull the default model (e.g., `gemma4:e4b` or any other local model):
-   ```powershell
+   ```bash
    ollama pull gemma4:e4b
    ```
 
@@ -106,31 +130,52 @@ Before getting started, make sure you have the following installed:
 
 ### 1. Clone & Setup Backend Environment
 Create a Python virtual environment and install dependencies in editable mode:
-```powershell
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -e .[dev]
-```
-*(If Windows temp directory restrictions occur, run the temporary path overrides documented in [docs/TROUBLESHOOTING.md](file:///d:/Projects/private-pageindex-rag/docs/TROUBLESHOOTING.md)).*
+
+*   **Windows (PowerShell)**:
+    ```powershell
+    python -m venv .venv
+    .\.venv\Scripts\python.exe -m pip install -e .[dev]
+    ```
+*   **Linux/macOS (bash)**:
+    ```bash
+    python -m venv .venv
+    source .venv/bin/activate
+    pip install -e .[dev]
+    ```
+
+*(If Windows temp directory restrictions occur, run the temporary path overrides documented in [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)).*
 
 ### 2. Configure Environment Variables
 Copy the example template to create your local config (defaults are pre-configured to work out-of-the-box):
-```powershell
-copy .env.example .env
-```
+
+*   **Windows (PowerShell)**:
+    ```powershell
+    copy .env.example .env
+    ```
+*   **Linux/macOS (bash)**:
+    ```bash
+    cp .env.example .env
+    ```
 
 ### 3. Run the Web Application
 
-The application can be run in two modes:
+The application can be run in three modes:
 
 #### Option A: Development Mode (Separate servers)
 Highly recommended if making modifications.
 
 1. **Start Backend Server** (Port 8000):
-   ```powershell
-   .\.venv\Scripts\python.exe -m uvicorn private_pageindex.web.app:app --reload --host 127.0.0.1 --port 8000
-   ```
+   *   **Windows (PowerShell)**:
+       ```powershell
+       .\.venv\Scripts\python.exe -m uvicorn private_pageindex.web.app:app --reload --host 127.0.0.1 --port 8000
+       ```
+   *   **Linux/macOS (bash)**:
+       ```bash
+       source .venv/bin/activate
+       python -m uvicorn private_pageindex.web.app:app --reload --host 127.0.0.1 --port 8000
+       ```
 2. **Start Frontend Dev Server** (Port 5173):
-   ```powershell
+   ```bash
    cd frontend
    npm install
    npm run dev
@@ -141,16 +186,33 @@ Highly recommended if making modifications.
 Ideal for testing final builds.
 
 1. **Compile frontend assets**:
-   ```powershell
+   ```bash
    cd frontend
    npm install
    npm run build
+   cd ..
    ```
 2. **Start backend server**:
-   ```powershell
-   .\.venv\Scripts\python.exe -m uvicorn private_pageindex.web.app:app --host 127.0.0.1 --port 8000
-   ```
+   *   **Windows (PowerShell)**:
+       ```powershell
+       .\.venv\Scripts\python.exe -m uvicorn private_pageindex.web.app:app --host 127.0.0.1 --port 8000
+       ```
+   *   **Linux/macOS (bash)**:
+       ```bash
+       source .venv/bin/activate
+       python -m uvicorn private_pageindex.web.app:app --host 127.0.0.1 --port 8000
+       ```
 3. Navigate to **http://127.0.0.1:8000** in your browser. FastAPI automatically serves the static assets.
+
+#### Option C: Running with Docker (Easy onboarding)
+Runs the backend and serves built React assets out-of-the-box, connecting to the host machine's Ollama instance.
+
+1. Ensure Ollama is running on the host machine.
+2. Build and start the container using Docker Compose:
+   ```bash
+   docker compose up --build -d
+   ```
+3. Navigate to **http://localhost:8000** in your browser. Local database and uploaded PDF files are persisted in `./data/`.
 
 ---
 
@@ -159,26 +221,51 @@ Ideal for testing final builds.
 If you prefer terminal-only operations, you can run RAG queries and ingestion via the backend CLI:
 
 *   **Ingest a local PDF**:
-    ```powershell
-    .\.venv\Scripts\python.exe -m private_pageindex.cli ingest <path_to_pdf>
-    ```
+    *   **Windows (PowerShell)**:
+        ```powershell
+        .\.venv\Scripts\python.exe -m private_pageindex.cli ingest <path_to_pdf>
+        ```
+    *   **Linux/macOS (bash)**:
+        ```bash
+        source .venv/bin/activate
+        python -m private_pageindex.cli ingest <path_to_pdf>
+        ```
 *   **Query an indexed document**:
-    ```powershell
-    .\.venv\Scripts\python.exe -m private_pageindex.cli ask <doc_id> "What is the security protocol?"
-    ```
+    *   **Windows (PowerShell)**:
+        ```powershell
+        .\.venv\Scripts\python.exe -m private_pageindex.cli ask <doc_id> "What is the security protocol?"
+        ```
+    *   **Linux/macOS (bash)**:
+        ```bash
+        source .venv/bin/activate
+        python -m private_pageindex.cli ask <doc_id> "What is the security protocol?"
+        ```
 *   **Start the web server**:
-    ```powershell
-    .\.venv\Scripts\python.exe -m private_pageindex.cli serve
-    ```
+    *   **Windows (PowerShell)**:
+        ```powershell
+        .\.venv\Scripts\python.exe -m private_pageindex.cli serve
+        ```
+    *   **Linux/macOS (bash)**:
+        ```bash
+        source .venv/bin/activate
+        python -m private_pageindex.cli serve
+        ```
 
 ---
 
 ## 🧪 Testing
 
 Run the full automated backend test suite (116 tests total):
-```powershell
-.\.venv\Scripts\python.exe -m pytest -v
-```
+
+*   **Windows (PowerShell)**:
+    ```powershell
+    .\.venv\Scripts\python.exe -m pytest -v
+    ```
+*   **Linux/macOS (bash)**:
+    ```bash
+    source .venv/bin/activate
+    python -m pytest -v
+    ```
 
 ---
 
@@ -186,13 +273,13 @@ Run the full automated backend test suite (116 tests total):
 
 Further details on codebase design and operations are organized in the `docs/` folder:
 
-*   [docs/PROJECT.md](file:///d:/Projects/private-pageindex-rag/docs/PROJECT.md): Overview, capabilities, boundaries, and workspace name.
-*   [docs/PROBLEM_SOLVED.md](file:///d:/Projects/private-pageindex-rag/docs/PROBLEM_SOLVED.md): Comparison with traditional RAG, problem statements, and performance metrics.
-*   [docs/ARCHITECTURE.md](file:///d:/Projects/private-pageindex-rag/docs/ARCHITECTURE.md): Data flows, module boundaries, database schemas, and offline setup.
-*   [docs/STRUCTURE.md](file:///d:/Projects/private-pageindex-rag/docs/STRUCTURE.md): Layout tree listing backend files, frontend assets, and ignored runtime directories.
-*   [docs/TROUBLESHOOTING.md](file:///d:/Projects/private-pageindex-rag/docs/TROUBLESHOOTING.md): Quick setup diagnostics, test coverage rules, and common error recoveries.
-*   [design.md](file:///d:/Projects/private-pageindex-rag/design.md): "Terminal Scholar" frontend theme specs, typography tokens, component manifest, and layout constraints.
-*   [CONTRIBUTING.md](file:///d:/Projects/private-pageindex-rag/CONTRIBUTING.md): Development environments setup guidelines, testing instructions, and pull request workflows.
+*   [docs/PROJECT.md](docs/PROJECT.md): Overview, capabilities, boundaries, and workspace name.
+*   [docs/PROBLEM_SOLVED.md](docs/PROBLEM_SOLVED.md): Comparison with traditional RAG, problem statements, and performance metrics.
+*   [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): Data flows, module boundaries, database schemas, and offline setup.
+*   [docs/STRUCTURE.md](docs/STRUCTURE.md): Layout tree listing backend files, frontend assets, and ignored runtime directories.
+*   [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md): Quick setup diagnostics, test coverage rules, and common error recoveries.
+*   [docs/DESIGN.md](docs/DESIGN.md): "Terminal Scholar" frontend theme specs, typography tokens, component manifest, and layout constraints.
+*   [CONTRIBUTING.md](CONTRIBUTING.md): Development environments setup guidelines, testing instructions, and pull request workflows.
 
 ---
 
@@ -207,4 +294,4 @@ Further details on codebase design and operations are organized in the `docs/` f
 
 ## 📄 License
 
-Distributed under the MIT License. See [LICENSE](file:///d:/Projects/private-pageindex-rag/LICENSE) for more details.
+Distributed under the MIT License. See [LICENSE](LICENSE) for more details.
