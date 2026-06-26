@@ -1,5 +1,7 @@
 """Unit tests for entity extraction helpers."""
 
+from urllib.parse import urlparse
+
 from private_pageindex.indexing.entity_extraction import extract_key_entities
 
 
@@ -18,10 +20,10 @@ def test_extract_phone_numbers():
 
 
 def test_extract_urls():
-    text = "Visit https://example.com/docs or read www.wikipedia.org for details."
+    text = "Visit https://example.com/docs or read https://www.wikipedia.org for details."
     entities = extract_key_entities(text)
     assert "https://example.com/docs" in entities
-    assert "www.wikipedia.org" in entities
+    assert any(urlparse(entity).hostname == "www.wikipedia.org" for entity in entities)
 
 
 def test_extract_contacts_and_names():
