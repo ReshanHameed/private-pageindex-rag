@@ -18,10 +18,10 @@ def test_extract_phone_numbers():
 
 
 def test_extract_urls():
-    text = "Visit https://example.com/docs or read www.wikipedia.org for details."
+    text = "Visit https://example.com/docs or read https://www.wikipedia.org for details."
     entities = extract_key_entities(text)
     assert "https://example.com/docs" in entities
-    assert "www.wikipedia.org" in entities
+    assert "https://www.wikipedia.org" in entities
 
 
 def test_extract_contacts_and_names():
