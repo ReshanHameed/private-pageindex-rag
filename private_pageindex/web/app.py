@@ -800,8 +800,13 @@ if _frontend_dist.is_dir() and (_frontend_dist / "index.html").is_file():
         hit this handler.
         """
         # Try to serve the exact file first (e.g. /favicon.svg, /logo.svg)
-        candidate = _frontend_dist / full_path
-        if candidate.is_file() and not full_path.startswith("api"):
+        dist_root = _frontend_dist.resolve()
+        candidate = (dist_root / full_path).resolve()
+        try:
+            candidate.relative_to(dist_root)
+        except ValueError:
+            candidate = None
+        if candidate is not None and candidate.is_file() and not full_path.startswith("api"):
             return FileResponse(candidate)
         # Otherwise return index.html for client-side routing
         return FileResponse(_frontend_dist / "index.html")
