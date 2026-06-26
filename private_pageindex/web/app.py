@@ -801,15 +801,13 @@ if _frontend_dist.is_dir() and (_frontend_dist / "index.html").is_file():
         """
         # Try to serve the exact file first (e.g. /favicon.svg, /logo.svg)
         dist_root = _frontend_dist.resolve()
-        try:
-            normalized_rel = Path("/", full_path).resolve().relative_to("/")
-        except ValueError:
-            normalized_rel = None
+        rel_path = Path(full_path)
 
-        if normalized_rel is None:
+        # Reject absolute paths and traversal attempts; only allow safe relative paths.
+        if rel_path.is_absolute() or any(part == ".." for part in rel_path.parts):
             candidate = None
         else:
-            candidate = (dist_root / normalized_rel).resolve()
+            candidate = (dist_root / rel_path).resolve()
             try:
                 candidate.relative_to(dist_root)
             except ValueError:
