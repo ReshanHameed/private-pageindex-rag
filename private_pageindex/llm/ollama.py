@@ -331,8 +331,8 @@ class AsyncOllamaClient:
             return {"status": "unreachable", "detail": f"Cannot connect to {self.base_url}"}
         except httpx.TimeoutException:
             return {"status": "timeout", "detail": "Ollama server did not respond in time"}
-        except Exception as exc:
-            return {"status": "error", "detail": str(exc)}
+        except Exception:
+            return {"status": "error", "detail": "Unexpected error while checking Ollama health"}
 
         try:
             data = response.json()
