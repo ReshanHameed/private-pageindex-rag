@@ -274,7 +274,10 @@ async def ask_question(request: Request, doc_id: str):
     finally:
         await llm_client.close()
 
-    return RedirectResponse(url=f"/documents/{doc_id}", status_code=303)
+    return RedirectResponse(
+        url=request.url_for("document_detail", doc_id=document.id),
+        status_code=303,
+    )
 
 
 @app.get("/documents/{doc_id}/chats/{chat_id}/trace", response_class=HTMLResponse)
