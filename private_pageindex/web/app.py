@@ -723,8 +723,8 @@ async def api_ask_question_stream(doc_id: str, request: AskRequest):
             done_event = {"type": "done", "chat_id": chat.id, "session_id": session_id, "answer": full_answer, "citations": citations}
             yield f"data: {json.dumps(done_event)}\n\n"
 
-        except Exception as exc:
-            err_event = {"type": "error", "detail": str(exc)}
+        except Exception:
+            err_event = {"type": "error", "detail": "An internal error has occurred."}
             yield f"data: {json.dumps(err_event)}\n\n"
         finally:
             await llm_client.close()
