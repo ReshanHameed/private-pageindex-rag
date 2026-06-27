@@ -307,8 +307,8 @@ async def ollama_status():
             return health
         finally:
             await client.close()
-    except Exception as exc:
-        return {"status": "unreachable", "detail": str(exc)}
+    except Exception:
+        return {"status": "unreachable", "detail": "Unable to check Ollama status"}
 
 
 @app.get("/api/ollama-models", response_class=JSONResponse)
@@ -320,12 +320,12 @@ async def ollama_models():
             health = await client.check_health()
         finally:
             await client.close()
-    except Exception as exc:
+    except Exception:
         return {
             "status": "unreachable",
             "default_model": settings.ollama_model,
             "models": [],
-            "detail": str(exc),
+            "detail": "Unable to retrieve Ollama models",
         }
     return {
         "status": health.get("status", "error"),
