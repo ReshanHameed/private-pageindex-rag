@@ -252,8 +252,8 @@ async def generate_answer_stream(
         async for token in llm_client.chat_text_stream(system_prompt, user_prompt, history=chat_history):
             full_answer_parts.append(token)
             yield {"type": "token", "text": token}
-    except Exception as exc:
-        error_msg = f"Answer generation failed: {exc}"
+    except Exception:
+        error_msg = "Answer generation failed due to an internal error."
         full_answer_parts = [error_msg]
         yield {"type": "token", "text": error_msg}
 
