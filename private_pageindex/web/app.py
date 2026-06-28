@@ -5,6 +5,7 @@ from __future__ import annotations
 
 
 import json
+import re
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -802,9 +803,19 @@ if _frontend_dist.is_dir() and (_frontend_dist / "index.html").is_file():
         # Try to serve the exact file first (e.g. /favicon.svg, /logo.svg)
         dist_root = _frontend_dist.resolve()
         rel_path = Path(full_path)
+        safe_part_re = re.compile(r"^[A-Za-z0-9._-]+$")
 
-        # Reject absolute paths and traversal attempts; only allow safe relative paths.
-        if rel_path.is_absolute() or any(part == ".." for part in rel_path.parts):
+        # Reject absolute paths, traversal attempts, and suspicious path segments.
+        parts = rel_path.parts
+        invalid_part = any(
+            part in ("", ".", "..")
+            or "/" in part
+            or "\\" in part
+            or "\x00" in part
+            or not safe_part_re.fullmatch(part)
+            for part in parts
+        )
+        if rel_path.is_absolute() or invalid_part:
             candidate = None
         else:
             candidate = (dist_root / rel_path).resolve()
