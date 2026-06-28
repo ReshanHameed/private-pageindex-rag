@@ -8,7 +8,7 @@ import json
 import re
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from fastapi import (
@@ -800,31 +800,37 @@ if _frontend_dist.is_dir() and (_frontend_dist / "index.html").is_file():
         are never intercepted. Only unmatched paths (e.g. /documents/abc)
         hit this handler.
         """
+        # Never handle API-like paths here.
+        if full_path == "api" or full_path.startswith("api/"):
+            return FileResponse(_frontend_dist / "index.html")
+
         # Try to serve the exact file first (e.g. /favicon.svg, /logo.svg)
         dist_root = _frontend_dist.resolve()
-        rel_path = Path(full_path)
         safe_part_re = re.compile(r"^[A-Za-z0-9._-]+$")
 
-        # Reject absolute paths, traversal attempts, and suspicious path segments.
-        parts = rel_path.parts
-        invalid_part = any(
-            part in ("", ".", "..")
-            or "/" in part
-            or "\\" in part
-            or "\x00" in part
-            or not safe_part_re.fullmatch(part)
-            for part in parts
+        # Parse as POSIX-style URL path, then validate each segment.
+        rel_posix = PurePosixPath(full_path)
+        parts = rel_posix.parts
+        invalid_part = (
+            rel_posix.is_absolute()
+            or any(
+                part in ("", ".", "..")
+                or "\\" in part
+                or "\x00" in part
+                or not safe_part_re.fullmatch(part)
+                for part in parts
+            )
         )
-        if rel_path.is_absolute() or invalid_part:
-            candidate = None
-        else:
-            candidate = (dist_root / rel_path).resolve()
+
+        candidate = None
+        if not invalid_part:
+            candidate = (dist_root.joinpath(*parts)).resolve()
             try:
                 candidate.relative_to(dist_root)
             except ValueError:
                 candidate = None
 
-        if candidate is not None and candidate.is_file() and not full_path.startswith("api"):
+        if candidate is not None and candidate.is_file():
             return FileResponse(candidate)
         # Otherwise return index.html for client-side routing
         return FileResponse(_frontend_dist / "index.html")
