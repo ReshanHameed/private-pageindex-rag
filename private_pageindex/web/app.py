@@ -67,6 +67,13 @@ def _normalize_model(model: str | None) -> str | None:
     return model_name or None
 
 
+def _validated_doc_id(doc_id: str) -> str:
+    value = doc_id.strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", value):
+        raise HTTPException(status_code=400, detail="Invalid document id.")
+    return value
+
+
 def _document_status_payload(doc_id: str) -> dict[str, Any]:
     document = storage.get_document(doc_id)
     return {
@@ -275,7 +282,8 @@ async def ask_question(request: Request, doc_id: str):
     finally:
         await llm_client.close()
 
-    return RedirectResponse(url=f"/documents/{doc_id}", status_code=303)
+    safe_doc_id = _validated_doc_id(doc_id)
+    return RedirectResponse(url=f"/documents/{safe_doc_id}", status_code=303)
 
 
 @app.get("/documents/{doc_id}/chats/{chat_id}/trace", response_class=HTMLResponse)
