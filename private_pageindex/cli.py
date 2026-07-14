@@ -43,6 +43,19 @@ def main(argv: list[str] | None = None) -> None:
     serve_parser.add_argument("--host", type=str, default=None, help="Host address to bind to.")
     serve_parser.add_argument("--port", type=int, default=None, help="Port to bind to.")
 
+    # serve-mcp
+    mcp_parser = subparsers.add_parser(
+        "serve-mcp",
+        help="Start the MCP server for external agents (stdio by default).",
+    )
+    mcp_parser.add_argument(
+        "--http",
+        action="store_true",
+        help="Run as a shared streamable-HTTP server instead of stdio.",
+    )
+    mcp_parser.add_argument("--host", type=str, default=None, help="HTTP bind host.")
+    mcp_parser.add_argument("--port", type=int, default=None, help="HTTP bind port.")
+
     args = parser.parse_args(argv)
 
     if args.command == "ingest":
@@ -51,6 +64,8 @@ def main(argv: list[str] | None = None) -> None:
         _cmd_ask(args.doc_id, args.question)
     elif args.command == "serve":
         _cmd_serve(args.host, args.port)
+    elif args.command == "serve-mcp":
+        _cmd_serve_mcp(args.http, args.host, args.port)
 
 
 def _cmd_ingest(pdf_path: str) -> None:
@@ -162,6 +177,38 @@ def _cmd_serve(host: str | None = None, port: int | None = None) -> None:
         port=srv_port,
         reload=not is_docker,
     )
+
+
+def _cmd_serve_mcp(http: bool, host: str | None, port: int | None) -> None:
+    """Start the MCP server so external agents can drive the pipeline."""
+    try:
+        from private_pageindex.mcp_server import serve as serve_mcp
+    except ModuleNotFoundError as exc:
+        print(
+            "The MCP server requires the 'mcp' package. Install it with:\n"
+            "  pip install -e .[mcp]",
+            file=sys.stderr,
+        )
+        raise SystemExit(1) from exc
+
+    settings = get_settings()
+    mode = "streamable HTTP" if http else "stdio"
+    # Log to stderr: in stdio mode, stdout is the JSON-RPC protocol channel.
+    print(f"Starting Private PageIndex RAG MCP server ({mode}).", file=sys.stderr)
+    print(f"Ollama endpoint: {settings.ollama_base_url}", file=sys.stderr)
+    print(f"Data directory:  {settings.data_dir}", file=sys.stderr)
+    print(f"Inbox directory: {settings.inbox_dir}", file=sys.stderr)
+    if http:
+        bind_host = host or settings.mcp_http_host
+        bind_port = port or settings.mcp_http_port
+        auth = "on" if (settings.mcp_auth_token or "").strip() else "off"
+        print(
+            f"HTTP endpoint:   http://{bind_host}:{bind_port}/mcp  (auth: {auth})",
+            file=sys.stderr,
+        )
+    print(file=sys.stderr)
+
+    serve_mcp(http=http, host=host, port=port)
 
 
 if __name__ == "__main__":

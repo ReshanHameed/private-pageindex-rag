@@ -294,9 +294,87 @@ If you prefer terminal-only operations, you can run RAG queries and ingestion vi
 
 ---
 
+## 🔌 MCP Server (Connect External Agents)
+
+Expose this project as a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server so external agents (Claude Desktop, Codex, Antigravity IDE, and any other MCP client) can ingest and query your local documents. Everything stays local — the MCP tools only call the same local functions and local Ollama endpoint the rest of the app uses.
+
+### Install the MCP extra
+
+```bash
+pip install -e .[mcp]
+```
+
+### Available tools
+
+| Tool | Description |
+| --- | --- |
+| `list_documents` | List indexed documents (id, filename, status, page count). |
+| `get_document` | Full metadata for one document. |
+| `get_document_tree` | The PageIndex structure tree (sections, page ranges, summaries). |
+| `list_inbox` | List PDFs in the local inbox folder. |
+| `ingest_pdf` | Index a PDF from a local `path` or an `inbox_filename`. Non-blocking; returns a `doc_id`. |
+| `get_ingest_status` | Poll indexing progress (percent, stage, status, error). |
+| `retrieve_context` | Return the raw relevant page text + citations (no LLM answer) so the calling agent reasons over the source. |
+| `ask` | Return a grounded answer with `[page N]` citations from the local model. |
+| `delete_document` | Delete a document and all associated data. |
+| `ollama_status` | Check local Ollama reachability and list models. |
+
+Queries made through `ask` and `retrieve_context` are persisted to the local SQLite DB, so they appear in the web UI and the retrieval trace debugger alongside web/CLI queries.
+
+### Run it
+
+The server runs over **stdio** by default (each agent launches it locally) or **streamable HTTP** (one shared instance):
+
+*   **stdio (Windows PowerShell)**:
+    ```powershell
+    .\.venv\Scripts\python.exe -m private_pageindex.cli serve-mcp
+    ```
+*   **stdio (Linux/macOS)**:
+    ```bash
+    python -m private_pageindex.cli serve-mcp
+    ```
+*   **Shared HTTP server** (default bind `127.0.0.1:8765`, endpoint `/mcp`):
+    ```bash
+    python -m private_pageindex.cli serve-mcp --http --host 127.0.0.1 --port 8765
+    ```
+
+A console script `private-pageindex-mcp` is also installed (runs stdio).
+
+### Connecting agents
+
+**Claude Desktop** — add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "private-pageindex-rag": {
+      "command": "python",
+      "args": ["-m", "private_pageindex.cli", "serve-mcp"],
+      "cwd": "/absolute/path/to/private-pageindex-rag"
+    }
+  }
+}
+```
+
+> On Windows, point `command` at the venv Python, e.g. `"D:\\path\\to\\private-pageindex-rag\\.venv\\Scripts\\python.exe"`.
+
+**Codex / other stdio clients** — configure an MCP server with the same command, args, and working directory as above.
+
+**Antigravity IDE / networked clients** — start the shared HTTP server and point the client at `http://127.0.0.1:8765/mcp`.
+
+### Inbox folder
+
+For clients that cannot pass absolute file paths, drop PDFs into the inbox folder (default `data/inbox/`, configurable via `INBOX_DIR`), then call `ingest_pdf` with the `inbox_filename` argument. Use `list_inbox` to see available files.
+
+### Optional HTTP authentication
+
+The HTTP server binds to localhost and is unauthenticated by default. To require a bearer token, set `MCP_AUTH_TOKEN` in your `.env`; clients must then send `Authorization: Bearer <token>`.
+
+---
+
 ## 🧪 Testing
 
-Run the full automated backend test suite (116 tests total):
+Run the full automated backend test suite (129 tests total):
 
 *   **Windows (PowerShell)**:
     ```powershell

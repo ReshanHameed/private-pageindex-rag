@@ -49,6 +49,8 @@ private-pageindex-rag/
   private_pageindex/
     config.py
     storage.py
+    documents.py
+    mcp_server.py
     cli.py
     __main__.py
     indexing/

@@ -25,6 +25,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from private_pageindex.config import get_settings
+from private_pageindex.documents import delete_document_and_assets
 from private_pageindex.ingest.pipeline import PipelineError, index_pdf
 from private_pageindex.llm.ollama import AsyncOllamaClient, OllamaClient, OllamaError
 from private_pageindex.retrieval.answering import (
@@ -769,12 +770,9 @@ def api_delete_document_rest(doc_id: str):
 
 def _delete_document_internal(doc_id: str) -> dict[str, str]:
     try:
-        storage.get_document(doc_id)
+        return delete_document_and_assets(doc_id, storage)
     except KeyError:
         raise HTTPException(status_code=404, detail="Document not found.")
-
-    storage.delete_document(doc_id)
-    return {"status": "success", "message": f"Document {doc_id} has been deleted."}
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 # Project Agent Memory
 
-Last updated: 2026-06-10
+Last updated: 2026-07-09
 
 This is the living handoff file for AI agents working on `private-pageindex-rag`. Read it after `AGENTS.md` and before editing. Update it at the end of every agent session that changes code, tests, docs, configuration, or project direction.
 
@@ -42,6 +42,7 @@ Privacy boundary:
 - Feature 7: tree-search retrieval and grounded answering with citations.
 - Feature 8: local FastAPI web app.
 - Feature 9: CLI and final docs.
+- Feature 10: MCP server (`private_pageindex/mcp_server.py`) exposing ingest, list, tree, retrieve-context, ask, delete, status, and inbox tools over stdio and streamable HTTP for external agents (Claude Desktop, Codex, Antigravity IDE).
 - Later hardening: messy-PDF tree reliability, tree validation reports, duplicate/cover/repeated-header handling, blank-page flags, and title-preserving LLM summary enhancement.
 - Later UX/lifecycle work: background web indexing, stage-based progress bars, elapsed indexing timer, web Ollama model picker, progress status endpoints, and orphan chat/trace cleanup.
 
@@ -56,7 +57,9 @@ Privacy boundary:
 - `private_pageindex/retrieval/tree_search.py`: tree-guided selection of relevant nodes and retrieved pages.
 - `private_pageindex/retrieval/answering.py`: grounded answer generation from retrieved text.
 - `private_pageindex/web/app.py`: upload, delete, document view, chat, trace, and Ollama status routes.
-- `private_pageindex/cli.py`: `ingest`, `ask`, and `serve` commands.
+- `private_pageindex/documents.py`: shared `delete_document_and_assets` deletion cascade used by web and MCP.
+- `private_pageindex/mcp_server.py`: FastMCP server + tools; `serve()` selects stdio or streamable-HTTP transport.
+- `private_pageindex/cli.py`: `ingest`, `ask`, `serve`, and `serve-mcp` commands.
 - `tests/`: automated test suite.
 - `docs/`: product, architecture, implementation history, structure, troubleshooting, plans, and this agent memory.
 
@@ -71,8 +74,13 @@ Privacy boundary:
 - Web upload indexing is backgrounded; progress is stored on `documents` and exposed through `/api/documents/{doc_id}/status`.
 - Web model selection comes from local Ollama `/api/tags` and is passed as a per-request model to indexing and chat.
 - Document deletion must remove chats, retrieval steps, nodes, document rows, uploaded PDFs, extracted pages, and tree JSON; startup cleanup removes old orphan chat/trace rows.
-- CLI command names are part of the user-facing contract: `ingest`, `ask`, `serve`.
+- CLI command names are part of the user-facing contract: `ingest`, `ask`, `serve`, `serve-mcp`.
 - FastAPI routes documented in `README.md` are user-facing contracts.
+- MCP tool names are user-facing contracts: `list_documents`, `get_document`, `get_document_tree`, `list_inbox`, `ingest_pdf`, `get_ingest_status`, `retrieve_context`, `ask`, `delete_document`, `ollama_status`.
+- MCP `ask`/`retrieve_context` persist chats + retrieval traces to SQLite so agent queries appear in the web UI and trace debugger.
+- MCP server keeps the privacy boundary: tools call only local functions + local Ollama; HTTP binds `127.0.0.1` by default with optional `MCP_AUTH_TOKEN` bearer gate.
+- `mcp` is an optional dependency (`pip install -e .[mcp]`, included in `dev`); the CLI imports `mcp_server` lazily so the core install works without it.
+- In stdio mode, stdout is the JSON-RPC channel — MCP server informational logging must go to stderr.
 
 ## Known Runtime Assumptions
 
@@ -90,9 +98,40 @@ Expected full suite command:
 .\.venv\Scripts\python.exe -m pytest -v
 ```
 
-The latest project docs say the full suite contains 116 tests. Verify this live before reporting it as current.
+The latest project docs say the full suite contains 129 tests. Verify this live before reporting it as current.
 
 ## Recent Work Log
+
+### 2026-07-09 - Added MCP server to expose the pipeline to external agents
+
+What changed:
+- **MCP server (NEW)**: Added `private_pageindex/mcp_server.py` using the official MCP Python SDK (`FastMCP`). Exposes 10 tools — `list_documents`, `get_document`, `get_document_tree`, `list_inbox`, `ingest_pdf`, `get_ingest_status`, `retrieve_context`, `ask`, `delete_document`, `ollama_status` — as a thin wrapper over existing functions (`index_pdf`, `search_tree`, `generate_answer`, `LocalStorage`). No cloud deps; privacy boundary intact.
+- **Transports**: stdio (default, per-agent) and streamable HTTP (`--http`, shared instance bound to `127.0.0.1:8765` by default) with optional `MCP_AUTH_TOKEN` bearer gate via a minimal ASGI middleware.
+- **Non-blocking ingest**: `ingest_pdf` creates the `processing` document row, returns a `doc_id` immediately, and runs `index_pdf` in a background daemon thread (tracked in `_INGEST_THREADS`); agents poll `get_ingest_status`. Accepts a local `path` or an `inbox_filename` from the inbox folder (`INBOX_DIR`, default `data/inbox/`).
+- **Persistence**: `ask` and `retrieve_context` persist chats + retrieval traces so agent queries appear in the web UI / trace debugger.
+- **Shared deletion helper (NEW)**: Extracted `_delete_document_internal` into `private_pageindex/documents.py::delete_document_and_assets`; web app now calls it (identical behavior).
+- **Config**: Added `inbox_dir`, `mcp_http_host`, `mcp_http_port`, `mcp_auth_token` settings.
+- **CLI**: Added `serve-mcp` subcommand (`--http`, `--host`, `--port`); logs to stderr to protect the stdio JSON-RPC channel.
+- **Packaging**: Added `mcp` optional extra + `dev` dep, and console script `private-pageindex-mcp`.
+- **Tests (NEW)**: `tests/test_mcp_server.py` — 13 tests covering all tools with a fake LLM client and temp data dir.
+
+Files changed:
+- `private_pageindex/mcp_server.py` (NEW)
+- `private_pageindex/documents.py` (NEW)
+- `tests/test_mcp_server.py` (NEW)
+- `private_pageindex/config.py`
+- `private_pageindex/cli.py`
+- `private_pageindex/web/app.py`
+- `pyproject.toml`
+- `README.md`, `docs/ARCHITECTURE.md`, `docs/STRUCTURE.md`, `docs/AGENT_MEMORY.md`
+
+Verification:
+- Python pytest: 129 passed (116 existing + 13 new).
+- Manual smoke: streamable HTTP server starts and `/mcp` returns HTTP 406 to a bare GET (expected without the MCP handshake). stdio handshake via the MCP client discovers all 10 tools and calls `list_documents` successfully.
+
+New invariants/decisions:
+- Named the module `mcp_server` (not `mcp`) to avoid shadowing the installed `mcp` package.
+- MCP informational logging goes to stderr because stdout is the stdio JSON-RPC transport.
 
 ### 2026-06-10 - Implemented Custom Markdown and Citation Parser for Chat Console
 
