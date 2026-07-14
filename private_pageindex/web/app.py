@@ -823,6 +823,23 @@ async def api_mcp_info():
     }
 
 
+@app.get("/api/mcp/http-status", response_class=JSONResponse)
+async def api_mcp_http_status():
+    """Probe the configured streamable-HTTP MCP endpoint for reachability."""
+    settings = get_settings()
+    url = f"http://{settings.mcp_http_host}:{settings.mcp_http_port}/mcp"
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as probe:
+            resp = await probe.get(url)
+        return {"running": True, "url": url, "detail": f"HTTP {resp.status_code}"}
+    except httpx.ConnectError:
+        return {"running": False, "url": url, "detail": "Connection refused"}
+    except httpx.TimeoutException:
+        return {"running": False, "url": url, "detail": "Timed out"}
+    except Exception as exc:  # pragma: no cover - defensive
+        return {"running": False, "url": url, "detail": str(exc)}
+
+
 # ---------------------------------------------------------------------------
 # SPA Static Serving — Auto-detect Vite production build
 # ---------------------------------------------------------------------------
