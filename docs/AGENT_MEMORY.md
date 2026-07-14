@@ -1,6 +1,6 @@
 # Project Agent Memory
 
-Last updated: 2026-07-09
+Last updated: 2026-07-15
 
 This is the living handoff file for AI agents working on `private-pageindex-rag`. Read it after `AGENTS.md` and before editing. Update it at the end of every agent session that changes code, tests, docs, configuration, or project direction.
 
@@ -56,7 +56,7 @@ Privacy boundary:
 - `private_pageindex/llm/ollama.py`: local Ollama API client.
 - `private_pageindex/retrieval/tree_search.py`: tree-guided selection of relevant nodes and retrieved pages.
 - `private_pageindex/retrieval/answering.py`: grounded answer generation from retrieved text.
-- `private_pageindex/web/app.py`: upload, delete, document view, chat, trace, and Ollama status routes.
+- `private_pageindex/web/app.py`: upload, delete, document view, chat, trace, Ollama status, and read-only MCP connect routes (`/api/mcp/info`, `/api/mcp/http-status`).
 - `private_pageindex/documents.py`: shared `delete_document_and_assets` deletion cascade used by web and MCP.
 - `private_pageindex/mcp_server.py`: FastMCP server + tools; `serve()` selects stdio or streamable-HTTP transport.
 - `private_pageindex/cli.py`: `ingest`, `ask`, `serve`, and `serve-mcp` commands.
@@ -81,6 +81,7 @@ Privacy boundary:
 - MCP server keeps the privacy boundary: tools call only local functions + local Ollama; HTTP binds `127.0.0.1` by default with optional `MCP_AUTH_TOKEN` bearer gate.
 - `mcp` is an optional dependency (`pip install -e .[mcp]`, included in `dev`); the CLI imports `mcp_server` lazily so the core install works without it.
 - In stdio mode, stdout is the JSON-RPC channel — MCP server informational logging must go to stderr.
+- The web Connect screen (`/connect`) and its endpoints (`/api/mcp/info`, `/api/mcp/http-status`) are read-only: they report MCP config/tool catalog/reachability, never start/stop the MCP process, never write config to disk, and never expose the `MCP_AUTH_TOKEN` value (only an `auth_required` boolean).
 
 ## Known Runtime Assumptions
 
@@ -98,9 +99,32 @@ Expected full suite command:
 .\.venv\Scripts\python.exe -m pytest -v
 ```
 
-The latest project docs say the full suite contains 129 tests. Verify this live before reporting it as current.
+The latest project docs say the full suite contains 132 tests. Verify this live before reporting it as current.
 
 ## Recent Work Log
+
+### 2026-07-15 - Added in-app MCP Connect screen
+
+What changed:
+- Backend: added two read-only endpoints to `web/app.py` — `GET /api/mcp/info` (transports + tool catalog via `mcp.list_tools()`, degrades to `installed: false` when the optional `mcp` package is absent) and `GET /api/mcp/http-status` (httpx reachability probe of the shared HTTP endpoint). Neither exposes the auth token value.
+- Frontend: added a lazy `/connect` route and page with a read-only status bar, five agent cards (Claude Desktop [recommended], Cursor [one-click "Add to Cursor" deeplink], Codex [TOML], Antigravity IDE [HTTP], General/Manual) with client-generated copy-paste config, and a live tool catalog. Added `components/connect/` (ConfigBlock, AgentCard, McpStatusBar, ToolCatalog), MCP types + `api.getMcpInfo()`/`api.getMcpHttpStatus()`, and a sidebar "Connect" entry.
+
+Files changed:
+- `private_pageindex/web/app.py`
+- `tests/test_web_app.py`
+- `frontend/src/pages/ConnectPage.tsx` (NEW)
+- `frontend/src/components/connect/{ConfigBlock,AgentCard,McpStatusBar,ToolCatalog}.tsx` (NEW)
+- `frontend/src/lib/api.ts`, `frontend/src/lib/types.ts`
+- `frontend/src/App.tsx`, `frontend/src/components/layout/AppShell.tsx`
+- `README.md`, `docs/ARCHITECTURE.md`, `docs/AGENT_MEMORY.md`
+
+Verification:
+- Backend pytest: 132 passed (129 baseline + 3 new endpoint tests).
+- Frontend: `npx tsc --noEmit`, `npm run lint` (0 errors), and `npm run build` (separate `ConnectPage` chunk) all pass.
+
+Decisions / invariants:
+- The Connect screen and its endpoints are strictly read-only (no process control, no `.env` writes, no token-value exposure).
+- Executed on branch `feature/mcp-connect-screen`, forked from local `main` (which is ~23 commits behind `origin/main`); a rebase onto `origin/main` is a pending follow-up.
 
 ### 2026-07-09 - Added MCP server to expose the pipeline to external agents
 
