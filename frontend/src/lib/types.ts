@@ -60,3 +60,37 @@ export interface ChatSession {
   created_at: string;
   updated_at: string;
 }
+
+export interface McpTool {
+  name: string;
+  description: string;
+}
+
+export interface McpTransportStdio {
+  command: string;
+  args: string[];
+  cwd: string;
+}
+
+export interface McpTransportHttp {
+  host: string;
+  port: number;
+  url: string;
+  auth_required: boolean;
+}
+
+export interface McpInfo {
+  installed: boolean;
+  project_root: string;
+  python_executable: string;
+  stdio: McpTransportStdio;
+  http: McpTransportHttp;
+  inbox_dir: string;
+  tools: McpTool[];
+}
+
+export interface McpHttpStatus {
+  running: boolean;
+  url: string;
+  detail: string;
+}
