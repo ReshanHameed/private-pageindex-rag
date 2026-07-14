@@ -29,7 +29,9 @@ import threading
 from pathlib import Path
 from typing import Any
 
+import uvicorn
 from mcp.server.fastmcp import FastMCP
+from starlette.responses import JSONResponse
 
 from private_pageindex.config import get_settings
 from private_pageindex.documents import delete_document_and_assets
@@ -429,8 +431,6 @@ def _wrap_with_auth(app: Any, token: str) -> Any:
             headers = dict(scope.get("headers") or [])
             authorization = headers.get(b"authorization", b"").decode()
             if authorization != expected:
-                from starlette.responses import JSONResponse
-
                 response = JSONResponse({"error": "unauthorized"}, status_code=401)
                 await response(scope, receive, send)
                 return
@@ -447,8 +447,6 @@ def serve(*, http: bool = False, host: str | None = None, port: int | None = Non
     if not http:
         mcp.run()  # stdio transport
         return
-
-    import uvicorn
 
     bind_host = host or settings.mcp_http_host
     bind_port = port or settings.mcp_http_port
