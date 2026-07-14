@@ -114,7 +114,7 @@ export default function ConnectPage() {
   }, [info]);
 
   return (
-    <div className="w-full overflow-y-auto animate-fade-in pb-10">
+    <div className="w-full h-full overflow-y-auto animate-fade-in pb-10">
       <header className="mb-6">
         <h1 className="font-display font-bold text-xl text-text-primary tracking-wide uppercase">
           Connect
