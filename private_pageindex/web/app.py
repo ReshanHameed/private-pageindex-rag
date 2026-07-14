@@ -800,7 +800,7 @@ async def api_mcp_info():
             {"name": t.name, "description": (t.description or "").strip()}
             for t in tool_list
         ]
-    except ModuleNotFoundError:
+    except ImportError:
         installed = False
 
     return {
