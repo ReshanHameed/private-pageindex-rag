@@ -637,4 +637,26 @@ def test_api_ask_document_stream(monkeypatch):
         teardown_test_app(web_module, orig)
 
 
+def test_api_mcp_info_returns_transports_and_tools():
+    client, storage, test_dir, web_module, orig = make_test_app()
+    try:
+        response = client.get("/api/mcp/info")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["installed"] is True
+        # transport config
+        assert data["stdio"]["args"] == ["-m", "private_pageindex.cli", "serve-mcp"]
+        assert data["stdio"]["cwd"]
+        assert data["http"]["url"].endswith("/mcp")
+        assert isinstance(data["http"]["auth_required"], bool)
+        assert data["inbox_dir"]
+        # tool catalog read from the FastMCP registry
+        tool_names = {t["name"] for t in data["tools"]}
+        assert "ingest_pdf" in tool_names
+        assert "ask" in tool_names
+        assert "list_documents" in tool_names
+    finally:
+        teardown_test_app(web_module, orig)
+
+
 

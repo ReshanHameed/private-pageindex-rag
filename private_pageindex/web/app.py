@@ -6,11 +6,13 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+import httpx
 from fastapi import (
     BackgroundTasks,
     FastAPI,
@@ -773,6 +775,52 @@ def _delete_document_internal(doc_id: str) -> dict[str, str]:
         return delete_document_and_assets(doc_id, storage)
     except KeyError:
         raise HTTPException(status_code=404, detail="Document not found.")
+
+
+@app.get("/api/mcp/info", response_class=JSONResponse)
+async def api_mcp_info():
+    """Return MCP server connection info and the tool catalog (read-only)."""
+    settings = get_settings()
+    root = Path(__file__).resolve().parent.parent.parent
+    python_exe = sys.executable
+    host = settings.mcp_http_host
+    port = settings.mcp_http_port
+    auth_required = bool((settings.mcp_auth_token or "").strip())
+
+    installed = True
+    tools_payload: list[dict[str, str]] = []
+    try:
+        # Imported lazily inside the try/except because ``mcp_server`` imports
+        # the optional ``mcp`` package at module load. A top-level import would
+        # break this endpoint (and app startup) whenever ``mcp`` is absent.
+        from private_pageindex.mcp_server import mcp as mcp_app
+
+        tool_list = await mcp_app.list_tools()
+        tools_payload = [
+            {"name": t.name, "description": (t.description or "").strip()}
+            for t in tool_list
+        ]
+    except ModuleNotFoundError:
+        installed = False
+
+    return {
+        "installed": installed,
+        "project_root": str(root),
+        "python_executable": python_exe,
+        "stdio": {
+            "command": python_exe,
+            "args": ["-m", "private_pageindex.cli", "serve-mcp"],
+            "cwd": str(root),
+        },
+        "http": {
+            "host": host,
+            "port": port,
+            "url": f"http://{host}:{port}/mcp",
+            "auth_required": auth_required,
+        },
+        "inbox_dir": str(settings.inbox_dir),
+        "tools": tools_payload,
+    }
 
 
 # ---------------------------------------------------------------------------
