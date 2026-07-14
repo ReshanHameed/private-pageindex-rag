@@ -370,11 +370,15 @@ For clients that cannot pass absolute file paths, drop PDFs into the inbox folde
 
 The HTTP server binds to localhost and is unauthenticated by default. To require a bearer token, set `MCP_AUTH_TOKEN` in your `.env`; clients must then send `Authorization: Bearer <token>`.
 
+### In-app Connect screen
+
+The web UI includes a **Connect** screen (sidebar → Connect) that shows the MCP server status, the live tool catalog, and ready-to-copy connection config for Claude Desktop, Cursor (one-click "Add to Cursor"), Codex, Antigravity IDE, and manual MCP clients. It is read-only — it reports configuration and reachability but does not start or stop the MCP server.
+
 ---
 
 ## 🧪 Testing
 
-Run the full automated backend test suite (129 tests total):
+Run the full automated backend test suite (132 tests total):
 
 *   **Windows (PowerShell)**:
     ```powershell
