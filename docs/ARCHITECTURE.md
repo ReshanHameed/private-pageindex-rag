@@ -26,7 +26,8 @@ Text PDF
 | `private_pageindex/web/app.py` | FastAPI routes for upload, delete, document metadata, chats, live SSE streaming, Ollama status, and the read-only MCP Connect endpoints (`GET /api/mcp/info`, `GET /api/mcp/http-status`). Serves the built SPA static assets in production. |
 | `private_pageindex/documents.py` | Shared document-level operations (deletion cascade) used by both the web app and the MCP server. |
 | `private_pageindex/mcp_server.py` | MCP server (FastMCP) exposing ingest, list, tree, retrieve-context, ask, delete, status, and inbox tools over stdio and streamable HTTP for external agents. |
-| `private_pageindex/cli.py` | CLI commands for ingesting, asking, serving the web app, and serving the MCP server (`serve-mcp`). |
+| `private_pageindex/cli.py` | CLI commands: `ingest`, `ask`, `serve`, `serve-mcp`, and `dev` (one-command local stack). |
+| `private_pageindex/dev_runner.py` | Dev orchestrator used by `cli dev`: probes/starts Ollama, spawns backend, frontend, and MCP HTTP child processes; stops managed processes on Ctrl+C. |
 | `frontend/` | React 19 + Vite 6 + TypeScript + Tailwind CSS 4 frontend SPA. Integrates d3-force for knowledge graph visualization, Zustand for state management, and anime.js for UI transitions. |
 | `frontend/src/pages/ConnectPage.tsx` + `frontend/src/components/connect/` | In-app MCP **Connect** screen: `ConfigBlock`, `AgentCard`, `McpStatusBar`, and `ToolCatalog` render per-agent config and the live tool catalog from `/api/mcp/info`. |
 
@@ -83,3 +84,16 @@ The frontend is completely offline-first: it self-hosts all fonts (Space Grotesk
 - Ingest is non-blocking: `ingest_pdf` creates the `processing` document row, returns a `doc_id` immediately, and runs `index_pdf` in a background daemon thread. Agents poll `get_ingest_status`. PDFs can be supplied by local path or by filename from the inbox folder (`INBOX_DIR`, default `data/inbox/`).
 - `retrieve_context` returns raw relevant page text plus page citations (no LLM answer); `ask` returns a grounded answer with `[page N]` citations. Both persist a chat + retrieval trace so agent-initiated queries appear in the web UI and trace debugger.
 - Web UI: a read-only **Connect** screen (`/connect`) lists per-agent connection config and the live tool catalog. It is backed by two read-only endpoints in `web/app.py`: `GET /api/mcp/info` (transports + tool catalog via `mcp.list_tools()`, guarded so it degrades to `installed: false` when the optional `mcp` package is absent) and `GET /api/mcp/http-status` (an httpx reachability probe of the shared HTTP endpoint). Neither endpoint controls the MCP process or exposes the auth token value.
+
+## Local Dev Stack
+
+`python -m private_pageindex.cli dev` (or `scripts/dev.ps1` / `scripts/dev.sh`) starts the full local development environment in one terminal:
+
+| Process | Default URL | Notes |
+| --- | --- | --- |
+| Ollama | `http://localhost:11434` | Runs `ollama serve` only when not already reachable; leaves an existing tray instance running |
+| Backend | `http://127.0.0.1:8000` | uvicorn with `--reload` |
+| Frontend | `http://localhost:5173` | Vite dev server; proxies `/api` to backend |
+| MCP HTTP | `http://127.0.0.1:8765/mcp` | Shared streamable-HTTP MCP for Antigravity IDE and Connect status |
+
+stdio MCP (Claude Desktop, Cursor) is **not** started by `dev` — each client launches its own `serve-mcp` process. Flags: `--no-ollama`, `--no-frontend`, `--no-mcp`.

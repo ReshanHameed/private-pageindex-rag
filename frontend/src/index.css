@@ -263,6 +263,15 @@
   }
 }
 
+/* Hide scrollbars while preserving scroll (Connect page, sidebar, etc.) */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Custom Scrollbar for Terminal Scholar theme */
 ::-webkit-scrollbar {
   width: 6px;

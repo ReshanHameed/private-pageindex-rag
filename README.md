@@ -209,8 +209,44 @@ Copy the example template to create your local config (defaults are pre-configur
 
 The application can be run in three modes:
 
-#### Option A: Development Mode (Separate servers)
-Highly recommended if making modifications.
+#### Option A: Development Mode (one command)
+
+Start the backend API, Vite frontend, and shared MCP HTTP server together:
+
+*   **Windows (PowerShell)**:
+    ```powershell
+    .\.venv\Scripts\python.exe -m private_pageindex.cli dev
+    ```
+    Or use the helper script:
+    ```powershell
+    .\scripts\dev.ps1
+    ```
+*   **Linux/macOS (bash)**:
+    ```bash
+    source .venv/bin/activate
+    python -m private_pageindex.cli dev
+    ```
+    Or:
+    ```bash
+    ./scripts/dev.sh
+    ```
+
+This starts:
+- **Ollama** at `http://localhost:11434` (skipped if already running)
+- **Backend API** at `http://127.0.0.1:8000`
+- **Frontend UI** at `http://localhost:5173` (proxies `/api` to the backend)
+- **MCP HTTP** at `http://127.0.0.1:8765/mcp` (so the Connect screen shows HTTP running)
+
+Claude Desktop and Cursor still launch their own **stdio** MCP processes per session — that is expected and does not need a separate daemon.
+
+Useful flags:
+- `--no-ollama` — skip starting Ollama (when the tray app is already running)
+- `--no-frontend` — Ollama + backend + MCP HTTP only
+- `--no-mcp` — Ollama + backend + frontend only
+
+#### Option A2: Development Mode (separate terminals)
+
+If you prefer to run each service manually:
 
 1. **Start Backend Server** (Port 8000):
    *   **Windows (PowerShell)**:

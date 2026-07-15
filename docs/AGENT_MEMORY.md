@@ -44,6 +44,7 @@ Privacy boundary:
 - Feature 9: CLI and final docs.
 - Feature 10: MCP server (`private_pageindex/mcp_server.py`) exposing ingest, list, tree, retrieve-context, ask, delete, status, and inbox tools over stdio and streamable HTTP for external agents (Claude Desktop, Codex, Antigravity IDE).
 - Feature 11: in-app read-only MCP **Connect** screen (`/connect`, `frontend/src/pages/ConnectPage.tsx` + `frontend/src/components/connect/*`) backed by `GET /api/mcp/info` and `GET /api/mcp/http-status`; shows live tool catalog, status, and per-agent copy-paste configs.
+- Feature 12: single-command dev stack (`cli dev` / `scripts/dev.ps1` / `scripts/dev.sh`) orchestrating Ollama, backend, frontend, and shared MCP HTTP via `private_pageindex/dev_runner.py`.
 - Later hardening: messy-PDF tree reliability, tree validation reports, duplicate/cover/repeated-header handling, blank-page flags, and title-preserving LLM summary enhancement.
 - Later UX/lifecycle work: background web indexing, stage-based progress bars, elapsed indexing timer, web Ollama model picker, progress status endpoints, and orphan chat/trace cleanup.
 
@@ -75,7 +76,7 @@ Privacy boundary:
 - Web upload indexing is backgrounded; progress is stored on `documents` and exposed through `/api/documents/{doc_id}/status`.
 - Web model selection comes from local Ollama `/api/tags` and is passed as a per-request model to indexing and chat.
 - Document deletion must remove chats, retrieval steps, nodes, document rows, uploaded PDFs, extracted pages, and tree JSON; startup cleanup removes old orphan chat/trace rows.
-- CLI command names are part of the user-facing contract: `ingest`, `ask`, `serve`, `serve-mcp`.
+- CLI command names are part of the user-facing contract: `ingest`, `ask`, `serve`, `serve-mcp`, `dev`.
 - FastAPI routes documented in `README.md` are user-facing contracts.
 - MCP tool names are user-facing contracts: `list_documents`, `get_document`, `get_document_tree`, `list_inbox`, `ingest_pdf`, `get_ingest_status`, `retrieve_context`, `ask`, `delete_document`, `ollama_status`.
 - MCP `ask`/`retrieve_context` persist chats + retrieval traces to SQLite so agent queries appear in the web UI and trace debugger.
@@ -106,6 +107,75 @@ Expected full suite command:
 The latest project docs say the full suite contains 132 tests. Verify this live before reporting it as current.
 
 ## Recent Work Log
+
+### 2026-07-15 - Docs refresh + Graphify update (dev stack, Connect UI, MCP fixes)
+
+What changed:
+- **Docs**: Extended `docs/STRUCTURE.md` (`dev_runner.py`, `scripts/`), `docs/ARCHITECTURE.md` (Local Dev Stack section), `docs/TROUBLESHOOTING.md` (recommended `cli dev` at top), `docs/PROJECT.md` (dev capability). README and AGENTS.md already documented `dev` from prior session.
+- **Graphify**: Incremental AST update — `graphify update .` → 2262 nodes, 4465 edges, 165 communities; `graphify-out/graph.json`, `graph.html`, `GRAPH_REPORT.md` refreshed.
+- **Memory**: Added Feature 12, updated CLI contract to include `dev`, cleared stale `feature/mcp-connect-screen` follow-up (PR merged).
+
+Files changed:
+- `docs/STRUCTURE.md`, `docs/ARCHITECTURE.md`, `docs/TROUBLESHOOTING.md`, `docs/PROJECT.md`, `docs/AGENT_MEMORY.md`, `graphify-out/*`
+
+Verification:
+- `pytest tests/test_cli.py -v` — 5 passed (from dev stack work).
+
+### 2026-07-15 - Added single-command dev stack (`cli dev`)
+
+What changed:
+- **New `dev` CLI command**: `python -m private_pageindex.cli dev` starts Ollama (`ollama serve` when not already reachable), backend (uvicorn --reload), frontend (`npm run dev`), and shared MCP HTTP (`serve-mcp --http`) together. Ctrl+C stops managed child processes.
+- **Ollama handling**: Probes `OLLAMA_BASE_URL` / `http://localhost:11434` first; skips start when already running (typical on Windows tray app). Waits up to 20s for readiness when it does start `ollama serve`.
+- **Helper scripts**: `scripts/dev.ps1` (Windows) and `scripts/dev.sh` (Linux/macOS).
+- **Flags**: `--no-ollama`, `--no-frontend`, `--no-mcp`, plus host/port overrides for backend and MCP HTTP.
+- **Docs**: README Option A now recommends the one-command flow; AGENTS.md lists `dev`.
+
+Files changed:
+- `private_pageindex/dev_runner.py` (NEW), `private_pageindex/cli.py`, `scripts/dev.ps1`, `scripts/dev.sh`, `tests/test_cli.py`, `README.md`, `AGENTS.md`, `docs/AGENT_MEMORY.md`
+
+Verification:
+- `pytest tests/test_cli.py -v` (includes `build_dev_services` + `is_ollama_reachable` tests).
+
+Decisions / invariants:
+- stdio MCP (Claude Desktop / Cursor) is **not** started by `dev` — each client launches its own process. `dev` starts the optional shared HTTP MCP server so the Connect screen can show HTTP running.
+- Ollama started by `dev` is stopped on Ctrl+C; an already-running Ollama instance is left running.
+
+### 2026-07-15 - Connect screen status clarity and UI fixes
+
+What changed:
+- **Status bar**: Clarified that Claude Desktop uses **stdio** (shows `stdio: available` when MCP is installed). `HTTP: not running` and `HTTP auth: off` are expected unless the user starts the optional shared server with `serve-mcp --http` and sets `MCP_AUTH_TOKEN`. Added an explanatory caption under the status chips.
+- **ConfigBlock**: Moved the Copy button into the config header row (label left, Copy right) instead of absolute positioning over the label.
+- **Scrollbar**: Added `.no-scrollbar` utility and applied it to the Connect page so the right-edge scrollbar is hidden while scrolling still works.
+- **Generated config**: `buildJsonConfig` now includes absolute `DATA_DIR`/`INBOX_DIR` env vars in the Claude/Cursor JSON snippet.
+
+Files changed:
+- `frontend/src/components/connect/McpStatusBar.tsx`, `ConfigBlock.tsx`, `frontend/src/pages/ConnectPage.tsx`, `frontend/src/index.css`, `docs/AGENT_MEMORY.md`
+
+Verification:
+- `npm run lint` — 0 errors (4 pre-existing warnings).
+- `npm run build` — succeeds.
+
+### 2026-07-15 - Fixed Claude Desktop MCP connection (`ModuleNotFoundError`)
+
+What changed:
+- **Root cause**: Claude Desktop (packaged/MSIX build) reported `Server disconnected` for `private-pageindex-rag`. Its MCP log (`...\LocalCache\Roaming\Claude\logs\mcp-server-private-pageindex-rag.log`) showed `ModuleNotFoundError: No module named 'private_pageindex'` right after `initialize`. The package was **not actually importable from the venv** — `find_spec('private_pageindex')` returned NOT FOUND from a neutral cwd. Prior `serve-mcp` runs only worked because they ran from the project root (cwd is added to `sys.path` for `-m`) and tests use `pythonpath=["."]`. The packaged client does not reliably honor the config `cwd`, so it launched Python from another directory and the import failed.
+- **Fix 1 (real fix)**: Ran `.\.venv\Scripts\python.exe -m pip install -e .` so `private_pageindex` resolves from any directory. Verified: `find_spec` now returns `...\private_pageindex\__init__.py` and `python -m private_pageindex.cli --help` + `serve-mcp` both start from a neutral cwd (`C:\Users\Asus`) with no error.
+- **Fix 2 (data consistency)**: Added an `env` block to the Claude config pinning absolute `DATA_DIR`/`INBOX_DIR` (`D:\Projects\private-pageindex-rag\data` and `...\data\inbox`) so the MCP server shares the same storage as the web app regardless of launch cwd. Without this, the relative default `data/` would resolve against the client's launch dir and appear empty. Confirmed the startup banner now prints the absolute data/inbox paths.
+- **Docs**: Added a `docs/TROUBLESHOOTING.md` subsection "External Client (e.g. Claude Desktop) Shows 'Server disconnected' / `ModuleNotFoundError`" documenting the `pip install -e .` requirement and the absolute-path config pattern.
+
+Files changed:
+- `docs/TROUBLESHOOTING.md`, `docs/AGENT_MEMORY.md`
+- `claude_desktop_config.json` (user machine, outside repo): added `env` with absolute `DATA_DIR`/`INBOX_DIR`.
+
+Verification:
+- `find_spec('private_pageindex')` from `C:\Users\Asus` → resolves to project `__init__.py` (was NOT FOUND).
+- `serve-mcp` launched from neutral cwd starts cleanly (stderr banner, waits on stdin) instead of exiting with `ModuleNotFoundError`.
+- Claude config parses as valid JSON.
+
+Decisions / invariants:
+- **`pip install -e .` is required** for external MCP clients to launch `serve-mcp`; do not rely on cwd being the project root. Keep this in mind before telling users to connect a desktop client.
+- For desktop clients, pin absolute `DATA_DIR`/`INBOX_DIR` via the config `env` block so MCP and the web app share storage.
+- User must fully quit Claude Desktop (including tray/background) and relaunch to re-read the config and restart the server.
 
 ### 2026-07-15 - Rebased Connect branch onto origin/main, full verification, docs refresh
 
@@ -1213,6 +1283,5 @@ Important invariant added:
 
 ## Open Follow-Ups
 
-- `feature/mcp-connect-screen` is rebased and verified but not yet pushed/merged. Next step is Option 2 (push + open PR) or Option 1 (merge to `main`) per the finishing-a-development-branch flow. Backup at `backup/mcp-connect-pre-rebase` can be deleted once the branch is integrated.
 - Consider removing the remote Google Fonts request from the web UI if the user wants a stricter offline-only browser boundary.
 - Consider `llms.txt` only if this project gets published as a documentation website. For a local source repository, `AGENTS.md` is the better primary entry point.

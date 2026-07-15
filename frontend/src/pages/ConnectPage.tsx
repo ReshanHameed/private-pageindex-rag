@@ -13,6 +13,8 @@ import AgentCard from '../components/connect/AgentCard';
 import ToolCatalog from '../components/connect/ToolCatalog';
 
 function buildJsonConfig(info: McpInfo): string {
+  const sep = info.project_root.includes('\\') ? '\\' : '/';
+  const dataDir = `${info.project_root}${sep}data`;
   return JSON.stringify(
     {
       mcpServers: {
@@ -20,6 +22,10 @@ function buildJsonConfig(info: McpInfo): string {
           command: info.stdio.command,
           args: info.stdio.args,
           cwd: info.stdio.cwd,
+          env: {
+            DATA_DIR: dataDir,
+            INBOX_DIR: info.inbox_dir,
+          },
         },
       },
     },
@@ -114,7 +120,7 @@ export default function ConnectPage() {
   }, [info]);
 
   return (
-    <div className="w-full h-full overflow-y-auto animate-fade-in pb-10">
+    <div className="w-full h-full overflow-y-auto no-scrollbar animate-fade-in pb-10">
       <header className="mb-6">
         <h1 className="font-display font-bold text-xl text-text-primary tracking-wide uppercase">
           Connect

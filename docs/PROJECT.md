@@ -26,6 +26,7 @@ The project is not a PageIndex Cloud integration and does not call hosted model 
 - Expose the pipeline to external agents through a local MCP (Model Context Protocol) server that reuses the same local functions and local Ollama endpoint.
 - Stage PDFs for filename-based ingestion through a local inbox folder (`inbox_dir` / `INBOX_DIR`, default `data/inbox/`).
 - Discover MCP connection details from an in-app, read-only **Connect** screen (`/connect`) that lists the live tool catalog and copy-paste client configs.
+- Start the full local dev stack (Ollama, backend, frontend, MCP HTTP) with one CLI command: `python -m private_pageindex.cli dev`.
 
 ## MCP Agent Access
 

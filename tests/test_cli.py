@@ -62,3 +62,44 @@ def test_cli_help_shows_usage(capsys):
     assert "ingest" in captured.out
     assert "ask" in captured.out
     assert "serve" in captured.out
+    assert "dev" in captured.out
+
+
+def test_build_dev_services_includes_backend_frontend_and_mcp():
+    from private_pageindex.dev_runner import build_dev_services
+
+    root = Path(__file__).resolve().parent.parent
+    services = build_dev_services(
+        project_root=root,
+        python_executable="/usr/bin/python",
+        host="127.0.0.1",
+        port=8000,
+        mcp_host="127.0.0.1",
+        mcp_port=8765,
+    )
+    names = [service.name for service in services]
+    assert names == ["backend", "frontend", "mcp-http"]
+    assert services[0].command[1:4] == ["-m", "uvicorn", "private_pageindex.web.app:app"]
+    assert "serve-mcp" in services[2].command
+    assert "--http" in services[2].command
+    assert services[2].command[-2:] == ["--port", "8765"]
+
+
+def test_is_ollama_reachable_handles_connection_errors(monkeypatch):
+    from private_pageindex.dev_runner import is_ollama_reachable
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def get(self, url):
+            raise ConnectionError("offline")
+
+    monkeypatch.setattr("private_pageindex.dev_runner.httpx.Client", FakeClient)
+    assert is_ollama_reachable("http://localhost:11434") is False
