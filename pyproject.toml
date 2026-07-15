@@ -19,9 +19,16 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+mcp = [
+  "mcp>=1.2",
+]
 dev = [
   "pytest>=8.3",
+  "mcp>=1.2",
 ]
+
+[project.scripts]
+private-pageindex-mcp = "private_pageindex.mcp_server:main"
 
 [tool.setuptools.packages.find]
 include = ["private_pageindex*"]

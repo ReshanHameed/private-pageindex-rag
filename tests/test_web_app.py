@@ -4,6 +4,7 @@ import uuid
 from pathlib import Path
 
 import fitz
+import httpx
 from fastapi.testclient import TestClient
 
 from private_pageindex.ingest.pipeline import index_pdf
@@ -633,6 +634,85 @@ def test_api_ask_document_stream(monkeypatch):
             assert len(chats) == 1
             assert chats[0].question == "What is this?"
             assert chats[0].answer == "This is test. "
+    finally:
+        teardown_test_app(web_module, orig)
+
+
+def test_api_mcp_info_returns_transports_and_tools():
+    client, storage, test_dir, web_module, orig = make_test_app()
+    try:
+        response = client.get("/api/mcp/info")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["installed"] is True
+        # transport config
+        assert data["stdio"]["args"] == ["-m", "private_pageindex.cli", "serve-mcp"]
+        assert data["stdio"]["cwd"]
+        assert data["http"]["url"].endswith("/mcp")
+        assert isinstance(data["http"]["auth_required"], bool)
+        assert data["inbox_dir"]
+        # tool catalog read from the FastMCP registry
+        tool_names = {t["name"] for t in data["tools"]}
+        assert "ingest_pdf" in tool_names
+        assert "ask" in tool_names
+        assert "list_documents" in tool_names
+    finally:
+        teardown_test_app(web_module, orig)
+
+
+def test_api_mcp_http_status_running(monkeypatch):
+    class _FakeResp:
+        status_code = 406
+
+    class _FakeAsyncClient:
+        def __init__(self, *a, **k):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def get(self, url):
+            return _FakeResp()
+
+    monkeypatch.setattr("httpx.AsyncClient", _FakeAsyncClient)
+
+    client, storage, test_dir, web_module, orig = make_test_app()
+    try:
+        response = client.get("/api/mcp/http-status")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["running"] is True
+        assert data["url"].endswith("/mcp")
+        assert "406" in data["detail"]
+    finally:
+        teardown_test_app(web_module, orig)
+
+
+def test_api_mcp_http_status_not_running(monkeypatch):
+    class _FailAsyncClient:
+        def __init__(self, *a, **k):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+        async def get(self, url):
+            raise httpx.ConnectError("connection refused")
+
+    monkeypatch.setattr("httpx.AsyncClient", _FailAsyncClient)
+
+    client, storage, test_dir, web_module, orig = make_test_app()
+    try:
+        response = client.get("/api/mcp/http-status")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["running"] is False
     finally:
         teardown_test_app(web_module, orig)
 

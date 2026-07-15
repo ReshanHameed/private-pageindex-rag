@@ -1,6 +1,6 @@
 # Project Agent Memory
 
-Last updated: 2026-06-10
+Last updated: 2026-07-15
 
 This is the living handoff file for AI agents working on `private-pageindex-rag`. Read it after `AGENTS.md` and before editing. Update it at the end of every agent session that changes code, tests, docs, configuration, or project direction.
 
@@ -42,6 +42,8 @@ Privacy boundary:
 - Feature 7: tree-search retrieval and grounded answering with citations.
 - Feature 8: local FastAPI web app.
 - Feature 9: CLI and final docs.
+- Feature 10: MCP server (`private_pageindex/mcp_server.py`) exposing ingest, list, tree, retrieve-context, ask, delete, status, and inbox tools over stdio and streamable HTTP for external agents (Claude Desktop, Codex, Antigravity IDE).
+- Feature 11: in-app read-only MCP **Connect** screen (`/connect`, `frontend/src/pages/ConnectPage.tsx` + `frontend/src/components/connect/*`) backed by `GET /api/mcp/info` and `GET /api/mcp/http-status`; shows live tool catalog, status, and per-agent copy-paste configs.
 - Later hardening: messy-PDF tree reliability, tree validation reports, duplicate/cover/repeated-header handling, blank-page flags, and title-preserving LLM summary enhancement.
 - Later UX/lifecycle work: background web indexing, stage-based progress bars, elapsed indexing timer, web Ollama model picker, progress status endpoints, and orphan chat/trace cleanup.
 
@@ -55,8 +57,10 @@ Privacy boundary:
 - `private_pageindex/llm/ollama.py`: local Ollama API client.
 - `private_pageindex/retrieval/tree_search.py`: tree-guided selection of relevant nodes and retrieved pages.
 - `private_pageindex/retrieval/answering.py`: grounded answer generation from retrieved text.
-- `private_pageindex/web/app.py`: upload, delete, document view, chat, trace, and Ollama status routes.
-- `private_pageindex/cli.py`: `ingest`, `ask`, and `serve` commands.
+- `private_pageindex/web/app.py`: upload, delete, document view, chat, trace, Ollama status, and read-only MCP connect routes (`/api/mcp/info`, `/api/mcp/http-status`).
+- `private_pageindex/documents.py`: shared `delete_document_and_assets` deletion cascade used by web and MCP.
+- `private_pageindex/mcp_server.py`: FastMCP server + tools; `serve()` selects stdio or streamable-HTTP transport.
+- `private_pageindex/cli.py`: `ingest`, `ask`, `serve`, and `serve-mcp` commands.
 - `tests/`: automated test suite.
 - `docs/`: product, architecture, implementation history, structure, troubleshooting, plans, and this agent memory.
 
@@ -71,8 +75,14 @@ Privacy boundary:
 - Web upload indexing is backgrounded; progress is stored on `documents` and exposed through `/api/documents/{doc_id}/status`.
 - Web model selection comes from local Ollama `/api/tags` and is passed as a per-request model to indexing and chat.
 - Document deletion must remove chats, retrieval steps, nodes, document rows, uploaded PDFs, extracted pages, and tree JSON; startup cleanup removes old orphan chat/trace rows.
-- CLI command names are part of the user-facing contract: `ingest`, `ask`, `serve`.
+- CLI command names are part of the user-facing contract: `ingest`, `ask`, `serve`, `serve-mcp`.
 - FastAPI routes documented in `README.md` are user-facing contracts.
+- MCP tool names are user-facing contracts: `list_documents`, `get_document`, `get_document_tree`, `list_inbox`, `ingest_pdf`, `get_ingest_status`, `retrieve_context`, `ask`, `delete_document`, `ollama_status`.
+- MCP `ask`/`retrieve_context` persist chats + retrieval traces to SQLite so agent queries appear in the web UI and trace debugger.
+- MCP server keeps the privacy boundary: tools call only local functions + local Ollama; HTTP binds `127.0.0.1` by default with optional `MCP_AUTH_TOKEN` bearer gate.
+- `mcp` is an optional dependency (`pip install -e .[mcp]`, included in `dev`); the CLI imports `mcp_server` lazily so the core install works without it.
+- In stdio mode, stdout is the JSON-RPC channel — MCP server informational logging must go to stderr.
+- The web Connect screen (`/connect`) and its endpoints (`/api/mcp/info`, `/api/mcp/http-status`) are read-only: they report MCP config/tool catalog/reachability, never start/stop the MCP process, never write config to disk, and never expose the `MCP_AUTH_TOKEN` value (only an `auth_required` boolean).
 
 ## Known Runtime Assumptions
 
@@ -81,6 +91,9 @@ Privacy boundary:
 - Default Ollama model: `gemma4:e4b`.
 - Default Ollama URL: `http://localhost:11434`.
 - Default app URL: `http://127.0.0.1:8000`.
+- Default MCP HTTP endpoint: `http://127.0.0.1:8765/mcp` (`mcp_http_host`/`mcp_http_port`).
+- Default inbox folder: `data/inbox/` (`inbox_dir` / `INBOX_DIR`).
+- MCP is an optional extra: `pip install -e .[mcp]` (bundled in `[dev]`); `cli.py` imports `mcp_server` lazily.
 
 ## Verification Baseline
 
@@ -90,9 +103,84 @@ Expected full suite command:
 .\.venv\Scripts\python.exe -m pytest -v
 ```
 
-The latest project docs say the full suite contains 116 tests. Verify this live before reporting it as current.
+The latest project docs say the full suite contains 132 tests. Verify this live before reporting it as current.
 
 ## Recent Work Log
+
+### 2026-07-15 - Rebased Connect branch onto origin/main, full verification, docs refresh
+
+What changed:
+- **Rebase**: Rebased `feature/mcp-connect-screen` (15 commits) onto `origin/main` (which had 23 new commits, mostly CodeQL security autofixes). Only `private_pageindex/web/app.py` overlapped; resolved a single import conflict (kept both `import re` from the security fix and `import sys` from the MCP feature). Result: branch is now 0 behind / 15 ahead of `origin/main`, clean tree. Backup branch `backup/mcp-connect-pre-rebase` retained.
+- **Verification**: Backend `pytest` = 132 passed. Frontend `tsc --noEmit`, `npm run lint` (0 errors, 4 pre-existing warnings), and `npm run build` (ConnectPage emitted as its own lazy chunk) all pass. Runtime smoke: `mcp.list_tools()` returns all 10 tools; `/api/mcp/info` → 200 (`installed: true`, 10 tools, token NOT leaked); `/api/mcp/http-status` → 200 (`running: false` when no HTTP server up). Confirmed the rebased `app.py` coherently contains BOTH the CodeQL path-traversal hardening (`_validated_doc_id`, `PurePosixPath` SPA catch-all) and the MCP endpoints.
+- **Docs refresh (for external developers)**: Added MCP + Connect coverage to previously silent/stale docs — `docs/PROJECT.md` (capabilities + MCP Agent Access section + local-MCP boundary note), `docs/STRUCTURE.md` (connect components, ConnectPage, `data/inbox/`, source-folder notes), `docs/TROUBLESHOOTING.md` (fixed stale 116→132 count, added full MCP/Connect diagnostics), `AGENTS.md` (local-MCP allowed clarification, `serve-mcp` + MCP test commands), `.env.example` (`INBOX_DIR`, `MCP_HTTP_HOST`, `MCP_HTTP_PORT`, `MCP_AUTH_TOKEN`, `TREE_PROMPT_COMPACT_THRESHOLD`). Polished `README.md` (Key Features bullets, `serve-mcp` CLI pointer, MCP config table) and `docs/ARCHITECTURE.md` (MCP routes on `web/app.py`, Connect frontend pointer, tool list + config fields).
+- **Graphify**: Re-ran `graphify update .` to refresh the AST knowledge graph after the code changes.
+
+Files changed:
+- `private_pageindex/web/app.py` (rebase conflict resolution only)
+- `README.md`, `docs/PROJECT.md`, `docs/STRUCTURE.md`, `docs/TROUBLESHOOTING.md`, `docs/ARCHITECTURE.md`, `docs/AGENT_MEMORY.md`, `AGENTS.md`, `.env.example`
+
+Verification:
+- Backend pytest: 132 passed.
+- Frontend: `tsc --noEmit` clean, `npm run lint` 0 errors, `npm run build` succeeds.
+- Runtime smoke of MCP tools + Connect endpoints passed (see above).
+
+Decisions / invariants:
+- The pending rebase-onto-`origin/main` follow-up from the previous entry is now DONE.
+- `.env.example` is the source of truth for optional MCP env vars; keep it aligned with `config.py` and the README MCP config table.
+
+### 2026-07-15 - Added in-app MCP Connect screen
+
+What changed:
+- Backend: added two read-only endpoints to `web/app.py` — `GET /api/mcp/info` (transports + tool catalog via `mcp.list_tools()`, degrades to `installed: false` when the optional `mcp` package is absent) and `GET /api/mcp/http-status` (httpx reachability probe of the shared HTTP endpoint). Neither exposes the auth token value.
+- Frontend: added a lazy `/connect` route and page with a read-only status bar, five agent cards (Claude Desktop [recommended], Cursor [one-click "Add to Cursor" deeplink], Codex [TOML], Antigravity IDE [HTTP], General/Manual) with client-generated copy-paste config, and a live tool catalog. Added `components/connect/` (ConfigBlock, AgentCard, McpStatusBar, ToolCatalog), MCP types + `api.getMcpInfo()`/`api.getMcpHttpStatus()`, and a sidebar "Connect" entry.
+
+Files changed:
+- `private_pageindex/web/app.py`
+- `tests/test_web_app.py`
+- `frontend/src/pages/ConnectPage.tsx` (NEW)
+- `frontend/src/components/connect/{ConfigBlock,AgentCard,McpStatusBar,ToolCatalog}.tsx` (NEW)
+- `frontend/src/lib/api.ts`, `frontend/src/lib/types.ts`
+- `frontend/src/App.tsx`, `frontend/src/components/layout/AppShell.tsx`
+- `README.md`, `docs/ARCHITECTURE.md`, `docs/AGENT_MEMORY.md`
+
+Verification:
+- Backend pytest: 132 passed (129 baseline + 3 new endpoint tests).
+- Frontend: `npx tsc --noEmit`, `npm run lint` (0 errors), and `npm run build` (separate `ConnectPage` chunk) all pass.
+
+Decisions / invariants:
+- The Connect screen and its endpoints are strictly read-only (no process control, no `.env` writes, no token-value exposure).
+- Executed on branch `feature/mcp-connect-screen`, forked from local `main` (which is ~23 commits behind `origin/main`); a rebase onto `origin/main` is a pending follow-up.
+
+### 2026-07-09 - Added MCP server to expose the pipeline to external agents
+
+What changed:
+- **MCP server (NEW)**: Added `private_pageindex/mcp_server.py` using the official MCP Python SDK (`FastMCP`). Exposes 10 tools — `list_documents`, `get_document`, `get_document_tree`, `list_inbox`, `ingest_pdf`, `get_ingest_status`, `retrieve_context`, `ask`, `delete_document`, `ollama_status` — as a thin wrapper over existing functions (`index_pdf`, `search_tree`, `generate_answer`, `LocalStorage`). No cloud deps; privacy boundary intact.
+- **Transports**: stdio (default, per-agent) and streamable HTTP (`--http`, shared instance bound to `127.0.0.1:8765` by default) with optional `MCP_AUTH_TOKEN` bearer gate via a minimal ASGI middleware.
+- **Non-blocking ingest**: `ingest_pdf` creates the `processing` document row, returns a `doc_id` immediately, and runs `index_pdf` in a background daemon thread (tracked in `_INGEST_THREADS`); agents poll `get_ingest_status`. Accepts a local `path` or an `inbox_filename` from the inbox folder (`INBOX_DIR`, default `data/inbox/`).
+- **Persistence**: `ask` and `retrieve_context` persist chats + retrieval traces so agent queries appear in the web UI / trace debugger.
+- **Shared deletion helper (NEW)**: Extracted `_delete_document_internal` into `private_pageindex/documents.py::delete_document_and_assets`; web app now calls it (identical behavior).
+- **Config**: Added `inbox_dir`, `mcp_http_host`, `mcp_http_port`, `mcp_auth_token` settings.
+- **CLI**: Added `serve-mcp` subcommand (`--http`, `--host`, `--port`); logs to stderr to protect the stdio JSON-RPC channel.
+- **Packaging**: Added `mcp` optional extra + `dev` dep, and console script `private-pageindex-mcp`.
+- **Tests (NEW)**: `tests/test_mcp_server.py` — 13 tests covering all tools with a fake LLM client and temp data dir.
+
+Files changed:
+- `private_pageindex/mcp_server.py` (NEW)
+- `private_pageindex/documents.py` (NEW)
+- `tests/test_mcp_server.py` (NEW)
+- `private_pageindex/config.py`
+- `private_pageindex/cli.py`
+- `private_pageindex/web/app.py`
+- `pyproject.toml`
+- `README.md`, `docs/ARCHITECTURE.md`, `docs/STRUCTURE.md`, `docs/AGENT_MEMORY.md`
+
+Verification:
+- Python pytest: 129 passed (116 existing + 13 new).
+- Manual smoke: streamable HTTP server starts and `/mcp` returns HTTP 406 to a bare GET (expected without the MCP handshake). stdio handshake via the MCP client discovers all 10 tools and calls `list_documents` successfully.
+
+New invariants/decisions:
+- Named the module `mcp_server` (not `mcp`) to avoid shadowing the installed `mcp` package.
+- MCP informational logging goes to stderr because stdout is the stdio JSON-RPC transport.
 
 ### 2026-06-10 - Implemented Custom Markdown and Citation Parser for Chat Console
 
@@ -1125,5 +1213,6 @@ Important invariant added:
 
 ## Open Follow-Ups
 
+- `feature/mcp-connect-screen` is rebased and verified but not yet pushed/merged. Next step is Option 2 (push + open PR) or Option 1 (merge to `main`) per the finishing-a-development-branch flow. Backup at `backup/mcp-connect-pre-rebase` can be deleted once the branch is integrated.
 - Consider removing the remote Google Fonts request from the web UI if the user wants a stricter offline-only browser boundary.
 - Consider `llms.txt` only if this project gets published as a documentation website. For a local source repository, `AGENTS.md` is the better primary entry point.

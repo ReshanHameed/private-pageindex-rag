@@ -6,7 +6,7 @@
 .\.venv\Scripts\python.exe -m pytest -v
 ```
 
-Expected current result: 116 passing tests.
+Expected current result: 132 passing tests. Re-run before relying on this count; it drifts as tests are added.
 
 ## Start The Backend Web App
 
@@ -53,6 +53,71 @@ This compiles client files to `frontend/dist/`. The FastAPI backend will automat
 ```powershell
 .\.venv\Scripts\python.exe -m private_pageindex.cli serve
 ```
+
+## MCP Server (Connect External Agents)
+
+The MCP server exposes the pipeline to external agents. It requires the optional
+`mcp` package.
+
+Install the extra:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e .[mcp]
+```
+
+Start it over stdio (each agent launches its own instance):
+
+```powershell
+.\.venv\Scripts\python.exe -m private_pageindex.cli serve-mcp
+```
+
+Start a single shared HTTP instance (default bind `127.0.0.1:8765`, endpoint `/mcp`):
+
+```powershell
+.\.venv\Scripts\python.exe -m private_pageindex.cli serve-mcp --http --host 127.0.0.1 --port 8765
+```
+
+### Connect Screen Shows "Not Installed" / Empty Tool List
+
+The web UI **Connect** screen (sidebar → Connect) reads:
+
+```text
+http://127.0.0.1:8000/api/mcp/info
+```
+
+If it reports `installed: false` or an empty tool list, the optional `mcp`
+package is missing. Install it with `pip install -e .[mcp]` and restart the web
+app. This endpoint is read-only and never returns the `MCP_AUTH_TOKEN` value
+(only an `auth_required` boolean).
+
+### Connect Screen Shows HTTP "Not Running"
+
+The Connect screen probes the shared HTTP endpoint via:
+
+```text
+http://127.0.0.1:8000/api/mcp/http-status
+```
+
+It reports `running: false` unless you started the server in HTTP mode
+(`serve-mcp --http`). Confirm the host/port match `MCP_HTTP_HOST` /
+`MCP_HTTP_PORT` (defaults `127.0.0.1:8765`).
+
+### MCP HTTP Returns 401 Unauthorized
+
+If `MCP_AUTH_TOKEN` is set, HTTP clients must send
+`Authorization: Bearer <token>`. Clear the variable to disable authentication,
+or configure the matching token on the client.
+
+### Inbox Ingestion Fails
+
+`ingest_pdf` accepts either a local `path` or an `inbox_filename`. For the
+filename form, the file must exist under the inbox folder (`INBOX_DIR`, default
+`data/inbox/`). Use the `list_inbox` tool to see available files.
+
+### stdio Logging
+
+In stdio mode, stdout is the JSON-RPC channel. The server writes all
+informational logging to stderr; do not expect logs on stdout.
 
 ## Check Ollama
 

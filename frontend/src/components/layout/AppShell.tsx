@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Layers, MessageSquare, FilePlus, Database, ChevronRight, Trash2 } from 'lucide-react';
+import { Layers, MessageSquare, FilePlus, Database, ChevronRight, Trash2, Plug } from 'lucide-react';
 import { useAppStore } from '../../lib/store';
 import OllamaStatus from './OllamaStatus';
 import ModelPicker from './ModelPicker';
@@ -176,6 +176,27 @@ export default function AppShell({ children }: AppShellProps) {
                     </CollapsibleContent>
                   </SidebarMenuItem>
                 </Collapsible>
+              </SidebarMenu>
+
+              {/* Integrations */}
+              <div className="h-px bg-border-dim mx-2 my-2 group-data-[collapsible=icon]:hidden" />
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    tooltip="Connect"
+                    className={`transition-colors ${
+                      location.pathname === '/connect'
+                        ? '!bg-bg-interactive !text-accent hover:!bg-bg-interactive hover:!text-accent'
+                        : 'hover:!bg-bg-interactive hover:!text-accent text-text-secondary'
+                    }`}
+                  >
+                    <Link to="/connect">
+                      <Plug className="w-4 h-4 text-accent" />
+                      <span className="font-bold tracking-wider uppercase">Connect</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
 
               {/* Chat Sessions Section */}

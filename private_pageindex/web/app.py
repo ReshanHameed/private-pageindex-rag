@@ -5,12 +5,15 @@ from __future__ import annotations
 
 
 import json
+import logging
 import re
+import sys
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+import httpx
 from fastapi import (
     BackgroundTasks,
     FastAPI,
@@ -25,6 +28,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from private_pageindex.config import get_settings
+from private_pageindex.documents import delete_document_and_assets
 from private_pageindex.ingest.pipeline import PipelineError, index_pdf
 from private_pageindex.llm.ollama import AsyncOllamaClient, OllamaClient, OllamaError
 from private_pageindex.retrieval.answering import (
@@ -38,6 +42,7 @@ from private_pageindex.storage import LocalStorage
 settings = get_settings()
 storage = LocalStorage(settings.data_dir)
 storage.initialize()
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -769,12 +774,73 @@ def api_delete_document_rest(doc_id: str):
 
 def _delete_document_internal(doc_id: str) -> dict[str, str]:
     try:
-        storage.get_document(doc_id)
+        return delete_document_and_assets(doc_id, storage)
     except KeyError:
         raise HTTPException(status_code=404, detail="Document not found.")
 
-    storage.delete_document(doc_id)
-    return {"status": "success", "message": f"Document {doc_id} has been deleted."}
+
+@app.get("/api/mcp/info", response_class=JSONResponse)
+async def api_mcp_info():
+    """Return MCP server connection info and the tool catalog (read-only)."""
+    settings = get_settings()
+    root = Path(__file__).resolve().parent.parent.parent
+    python_exe = sys.executable
+    host = settings.mcp_http_host
+    port = settings.mcp_http_port
+    auth_required = bool((settings.mcp_auth_token or "").strip())
+
+    installed = True
+    tools_payload: list[dict[str, str]] = []
+    try:
+        # Imported lazily inside the try/except because ``mcp_server`` imports
+        # the optional ``mcp`` package at module load. A top-level import would
+        # break this endpoint (and app startup) whenever ``mcp`` is absent.
+        from private_pageindex.mcp_server import mcp as mcp_app
+
+        tool_list = await mcp_app.list_tools()
+        tools_payload = [
+            {"name": t.name, "description": (t.description or "").strip()}
+            for t in tool_list
+        ]
+    except ImportError:
+        installed = False
+
+    return {
+        "installed": installed,
+        "project_root": str(root),
+        "python_executable": python_exe,
+        "stdio": {
+            "command": python_exe,
+            "args": ["-m", "private_pageindex.cli", "serve-mcp"],
+            "cwd": str(root),
+        },
+        "http": {
+            "host": host,
+            "port": port,
+            "url": f"http://{host}:{port}/mcp",
+            "auth_required": auth_required,
+        },
+        "inbox_dir": str(settings.inbox_dir),
+        "tools": tools_payload,
+    }
+
+
+@app.get("/api/mcp/http-status", response_class=JSONResponse)
+async def api_mcp_http_status():
+    """Probe the configured streamable-HTTP MCP endpoint for reachability."""
+    settings = get_settings()
+    url = f"http://{settings.mcp_http_host}:{settings.mcp_http_port}/mcp"
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as probe:
+            resp = await probe.get(url)
+        return {"running": True, "url": url, "detail": f"HTTP {resp.status_code}"}
+    except httpx.ConnectError:
+        return {"running": False, "url": url, "detail": "Connection refused"}
+    except httpx.TimeoutException:
+        return {"running": False, "url": url, "detail": "Timed out"}
+    except Exception:  # pragma: no cover - defensive
+        logger.exception("Unexpected error while probing MCP HTTP endpoint")
+        return {"running": False, "url": url, "detail": "Unexpected error"}
 
 
 # ---------------------------------------------------------------------------

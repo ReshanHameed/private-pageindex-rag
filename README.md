@@ -57,6 +57,8 @@ We built **Private PageIndex RAG**, a local-first system that replaces vector se
 *   ⚡ **Live Citation Debugger**: Traces and animates retrieval steps (inspect tree, select nodes, fetch pages) directly on the knowledge graph in real-time as answers stream in.
 *   💬 **Conversational Memory**: Supports persistent multi-turn chat threads (sessions) per document, allowing you to switch contexts or delete history.
 *   📂 **Background Ingestion**: Ingests PDFs asynchronously with visible progress indicators, elapsed timers, and detailed processing stages.
+*   🔌 **MCP Server**: Exposes the pipeline to external agents (Claude Desktop, Cursor, Codex, Antigravity IDE) through a local Model Context Protocol server with 10 tools over stdio or streamable HTTP — no data leaves your machine.
+*   🧩 **In-app Connect Screen**: A read-only `/connect` hub shows the live MCP tool catalog, server status, and copy-paste client configs.
 *   🎨 **Terminal Scholar Theme**: Fuses monospace terminal aesthetics with academic research layouts. Built offline-first with 100% self-hosted fonts.
 *   🛠️ **CLI & API First**: Query, ingest, or serve the system via a fully documented REST API or command-line commands.
 
@@ -93,6 +95,11 @@ A zoomed-in view of the knowledge graph during active retrieval, showing node la
 The step-by-step timeline view of the RAG retrieval pipeline: `INSPECT_TREE` → `SELECT_NODES` → `FETCH_PAGES`, with node IDs and page ranges.
 
 ![Retrieval Trace UI](docs/screenshots/Retrievel%20Trace%20ui.png)
+
+### 🔌 MCP Connect Hub
+The read-only **Connect** screen for wiring external agents to the local MCP server — live server status, per-agent connection cards (Claude Desktop, Cursor one-click, Codex, Antigravity IDE, manual), copy-paste configs, and the live tool catalog.
+
+![MCP Connect Screen](docs/screenshots/MCP%20Connect.png)
 
 ### 🎬 Live Demo — Graph Tracing in Action
 Animated GIF showing the full RAG tracing flow with real-time graph node highlighting and answer streaming.
@@ -291,12 +298,115 @@ If you prefer terminal-only operations, you can run RAG queries and ingestion vi
         source .venv/bin/activate
         python -m private_pageindex.cli serve
         ```
+*   **Start the MCP server** (for external agents — see the [MCP Server](#-mcp-server-connect-external-agents) section for details):
+    *   **Windows (PowerShell)**:
+        ```powershell
+        .\.venv\Scripts\python.exe -m private_pageindex.cli serve-mcp
+        ```
+    *   **Linux/macOS (bash)**:
+        ```bash
+        source .venv/bin/activate
+        python -m private_pageindex.cli serve-mcp
+        ```
+
+---
+
+## 🔌 MCP Server (Connect External Agents)
+
+Expose this project as a [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server so external agents (Claude Desktop, Codex, Antigravity IDE, and any other MCP client) can ingest and query your local documents. Everything stays local — the MCP tools only call the same local functions and local Ollama endpoint the rest of the app uses.
+
+### Install the MCP extra
+
+```bash
+pip install -e .[mcp]
+```
+
+### Available tools
+
+| Tool | Description |
+| --- | --- |
+| `list_documents` | List indexed documents (id, filename, status, page count). |
+| `get_document` | Full metadata for one document. |
+| `get_document_tree` | The PageIndex structure tree (sections, page ranges, summaries). |
+| `list_inbox` | List PDFs in the local inbox folder. |
+| `ingest_pdf` | Index a PDF from a local `path` or an `inbox_filename`. Non-blocking; returns a `doc_id`. |
+| `get_ingest_status` | Poll indexing progress (percent, stage, status, error). |
+| `retrieve_context` | Return the raw relevant page text + citations (no LLM answer) so the calling agent reasons over the source. |
+| `ask` | Return a grounded answer with `[page N]` citations from the local model. |
+| `delete_document` | Delete a document and all associated data. |
+| `ollama_status` | Check local Ollama reachability and list models. |
+
+Queries made through `ask` and `retrieve_context` are persisted to the local SQLite DB, so they appear in the web UI and the retrieval trace debugger alongside web/CLI queries.
+
+### Run it
+
+The server runs over **stdio** by default (each agent launches it locally) or **streamable HTTP** (one shared instance):
+
+*   **stdio (Windows PowerShell)**:
+    ```powershell
+    .\.venv\Scripts\python.exe -m private_pageindex.cli serve-mcp
+    ```
+*   **stdio (Linux/macOS)**:
+    ```bash
+    python -m private_pageindex.cli serve-mcp
+    ```
+*   **Shared HTTP server** (default bind `127.0.0.1:8765`, endpoint `/mcp`):
+    ```bash
+    python -m private_pageindex.cli serve-mcp --http --host 127.0.0.1 --port 8765
+    ```
+
+A console script `private-pageindex-mcp` is also installed (runs stdio).
+
+### Connecting agents
+
+**Claude Desktop** — add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "private-pageindex-rag": {
+      "command": "python",
+      "args": ["-m", "private_pageindex.cli", "serve-mcp"],
+      "cwd": "/absolute/path/to/private-pageindex-rag"
+    }
+  }
+}
+```
+
+> On Windows, point `command` at the venv Python, e.g. `"D:\\path\\to\\private-pageindex-rag\\.venv\\Scripts\\python.exe"`.
+
+**Codex / other stdio clients** — configure an MCP server with the same command, args, and working directory as above.
+
+**Antigravity IDE / networked clients** — start the shared HTTP server and point the client at `http://127.0.0.1:8765/mcp`.
+
+### Inbox folder
+
+For clients that cannot pass absolute file paths, drop PDFs into the inbox folder (default `data/inbox/`, configurable via `INBOX_DIR`), then call `ingest_pdf` with the `inbox_filename` argument. Use `list_inbox` to see available files.
+
+### Configuration
+
+MCP behavior is controlled by these `.env` settings (all optional, with working defaults):
+
+| Setting (env var) | Config field | Default | Purpose |
+| --- | --- | --- | --- |
+| `INBOX_DIR` | `inbox_dir` | `data/inbox` | Folder scanned by `list_inbox` / used by `ingest_pdf` filename ingestion. |
+| `MCP_HTTP_HOST` | `mcp_http_host` | `127.0.0.1` | Bind host for `serve-mcp --http`. |
+| `MCP_HTTP_PORT` | `mcp_http_port` | `8765` | Bind port for `serve-mcp --http` (endpoint `/mcp`). |
+| `MCP_AUTH_TOKEN` | `mcp_auth_token` | _(empty)_ | Optional bearer token for the HTTP transport. |
+
+### Optional HTTP authentication
+
+The HTTP server binds to localhost and is unauthenticated by default. To require a bearer token, set `MCP_AUTH_TOKEN` in your `.env`; clients must then send `Authorization: Bearer <token>`. The web Connect screen only reports whether authentication is required — it never exposes the token value.
+
+### In-app Connect screen
+
+The web UI includes a **Connect** screen (sidebar → Connect) that shows the MCP server status, the live tool catalog, and ready-to-copy connection config for Claude Desktop, Cursor (one-click "Add to Cursor"), Codex, Antigravity IDE, and manual MCP clients. It is read-only — it reports configuration and reachability but does not start or stop the MCP server.
 
 ---
 
 ## 🧪 Testing
 
-Run the full automated backend test suite (116 tests total):
+Run the full automated backend test suite (132 tests total):
 
 *   **Windows (PowerShell)**:
     ```powershell

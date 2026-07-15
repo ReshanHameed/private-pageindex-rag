@@ -17,6 +17,29 @@ class Settings(BaseSettings):
     ollama_base_url: str = Field(default="http://localhost:11434")
     ollama_model: str = Field(default="gemma4:e4b")
     data_dir: Path = Field(default=Path("data"))
+    inbox_dir: Path = Field(
+        default=Path("data") / "inbox",
+        description=(
+            "Folder agents can drop PDFs into for ingestion by name via the "
+            "MCP server (see the ingest tool's inbox_filename argument)."
+        ),
+    )
+    mcp_http_host: str = Field(
+        default="127.0.0.1",
+        description="Bind host for the shared streamable-HTTP MCP server.",
+    )
+    mcp_http_port: int = Field(
+        default=8765,
+        description="Bind port for the shared streamable-HTTP MCP server.",
+    )
+    mcp_auth_token: str = Field(
+        default="",
+        description=(
+            "Optional bearer token required by the streamable-HTTP MCP server. "
+            "When empty, the HTTP server is unauthenticated (localhost-only "
+            "usage is expected)."
+        ),
+    )
     max_tree_prompt_chars: int = Field(default=45000)
     max_page_chars: int = Field(default=12000)
     tree_max_pages_per_node: int = Field(default=10)

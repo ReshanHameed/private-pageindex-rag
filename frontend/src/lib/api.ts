@@ -1,4 +1,4 @@
-import type { DocumentRecord, OllamaStatusResponse, OllamaModelsResponse } from './types';
+import type { DocumentRecord, OllamaStatusResponse, OllamaModelsResponse, McpInfo, McpHttpStatus } from './types';
 
 export const api = {
   async fetchDocuments(): Promise<DocumentRecord[]> {
@@ -109,5 +109,21 @@ export const api = {
     if (!res.ok) {
       throw new Error(`Failed to delete session: ${res.statusText}`);
     }
+  },
+
+  async getMcpInfo(): Promise<McpInfo> {
+    const res = await fetch('/api/mcp/info');
+    if (!res.ok) {
+      throw new Error(`Failed to fetch MCP info: ${res.statusText}`);
+    }
+    return res.json();
+  },
+
+  async getMcpHttpStatus(): Promise<McpHttpStatus> {
+    const res = await fetch('/api/mcp/http-status');
+    if (!res.ok) {
+      throw new Error(`Failed to fetch MCP HTTP status: ${res.statusText}`);
+    }
+    return res.json();
   },
 };

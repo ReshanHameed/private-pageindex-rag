@@ -11,6 +11,7 @@ import { TooltipProvider } from './components/ui/tooltip';
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const DocumentPage = lazy(() => import('./pages/DocumentPage'));
 const TracePage = lazy(() => import('./pages/TracePage'));
+const ConnectPage = lazy(() => import('./pages/ConnectPage'));
 
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -44,6 +45,7 @@ export default function App() {
                     <Route path="/" element={<DashboardPage />} />
                     <Route path="/documents/:docId" element={<DocumentPage />} />
                     <Route path="/documents/:docId/chats/:chatId/trace" element={<TracePage />} />
+                    <Route path="/connect" element={<ConnectPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Suspense>

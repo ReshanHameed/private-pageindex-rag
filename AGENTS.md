@@ -9,6 +9,7 @@ This repository is intended to be worked on by AI coding agents. Read this file 
 - Purpose: private, local-first PageIndex-style RAG for selectable-text PDFs.
 - Runtime boundary: local filesystem, SQLite, FastAPI, PyMuPDF, and local Ollama only.
 - Do not introduce PageIndex Cloud, OpenAI, Anthropic, hosted MCP servers, hosted inference APIs, vector databases, OCR, or cloud deployment unless the user explicitly asks for that direction.
+- A local, in-repo MCP server (`private_pageindex/mcp_server.py`) IS part of the project and is allowed. The ban above is on *hosted* MCP servers; the local MCP server keeps the same privacy boundary (local functions + local Ollama only).
 
 ## Required Startup Flow
 
@@ -38,8 +39,11 @@ This repository is intended to be worked on by AI coding agents. Read this file 
 .\.venv\Scripts\python.exe -m pytest -v
 .\.venv\Scripts\python.exe -m pytest tests/test_tree_builder.py -v
 .\.venv\Scripts\python.exe -m pytest tests/test_web_app.py tests/test_cli.py -v
+.\.venv\Scripts\python.exe -m pytest tests/test_mcp_server.py -v
 .\.venv\Scripts\python.exe -m uvicorn private_pageindex.web.app:app --reload --host 127.0.0.1 --port 8000
 .\.venv\Scripts\python.exe -m private_pageindex.cli serve
+.\.venv\Scripts\python.exe -m private_pageindex.cli serve-mcp
+.\.venv\Scripts\python.exe -m private_pageindex.cli serve-mcp --http --host 127.0.0.1 --port 8765
 ```
 
 ### Linux/macOS (bash)
@@ -48,9 +52,16 @@ source .venv/bin/activate
 python -m pytest -v
 python -m pytest tests/test_tree_builder.py -v
 python -m pytest tests/test_web_app.py tests/test_cli.py -v
+python -m pytest tests/test_mcp_server.py -v
 python -m uvicorn private_pageindex.web.app:app --reload --host 127.0.0.1 --port 8000
 python -m private_pageindex.cli serve
+python -m private_pageindex.cli serve-mcp
+python -m private_pageindex.cli serve-mcp --http --host 127.0.0.1 --port 8765
 ```
+
+The MCP server requires the optional extra: `pip install -e .[mcp]` (already
+included in `[dev]`). MCP tool names and the `serve-mcp` command are user-facing
+contracts — see `docs/AGENT_MEMORY.md` for the full invariant list.
 
 ## Memory Update Rule
 
