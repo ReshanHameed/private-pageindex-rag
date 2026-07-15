@@ -5,6 +5,7 @@ from __future__ import annotations
 
 
 import json
+import logging
 import re
 import sys
 from collections.abc import AsyncGenerator
@@ -41,6 +42,7 @@ from private_pageindex.storage import LocalStorage
 settings = get_settings()
 storage = LocalStorage(settings.data_dir)
 storage.initialize()
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -836,8 +838,9 @@ async def api_mcp_http_status():
         return {"running": False, "url": url, "detail": "Connection refused"}
     except httpx.TimeoutException:
         return {"running": False, "url": url, "detail": "Timed out"}
-    except Exception as exc:  # pragma: no cover - defensive
-        return {"running": False, "url": url, "detail": str(exc)}
+    except Exception:  # pragma: no cover - defensive
+        logger.exception("Unexpected error while probing MCP HTTP endpoint")
+        return {"running": False, "url": url, "detail": "Unexpected error"}
 
 
 # ---------------------------------------------------------------------------
