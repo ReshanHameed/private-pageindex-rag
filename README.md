@@ -57,6 +57,8 @@ We built **Private PageIndex RAG**, a local-first system that replaces vector se
 *   ⚡ **Live Citation Debugger**: Traces and animates retrieval steps (inspect tree, select nodes, fetch pages) directly on the knowledge graph in real-time as answers stream in.
 *   💬 **Conversational Memory**: Supports persistent multi-turn chat threads (sessions) per document, allowing you to switch contexts or delete history.
 *   📂 **Background Ingestion**: Ingests PDFs asynchronously with visible progress indicators, elapsed timers, and detailed processing stages.
+*   🔌 **MCP Server**: Exposes the pipeline to external agents (Claude Desktop, Cursor, Codex, Antigravity IDE) through a local Model Context Protocol server with 10 tools over stdio or streamable HTTP — no data leaves your machine.
+*   🧩 **In-app Connect Screen**: A read-only `/connect` hub shows the live MCP tool catalog, server status, and copy-paste client configs.
 *   🎨 **Terminal Scholar Theme**: Fuses monospace terminal aesthetics with academic research layouts. Built offline-first with 100% self-hosted fonts.
 *   🛠️ **CLI & API First**: Query, ingest, or serve the system via a fully documented REST API or command-line commands.
 
@@ -93,6 +95,11 @@ A zoomed-in view of the knowledge graph during active retrieval, showing node la
 The step-by-step timeline view of the RAG retrieval pipeline: `INSPECT_TREE` → `SELECT_NODES` → `FETCH_PAGES`, with node IDs and page ranges.
 
 ![Retrieval Trace UI](docs/screenshots/Retrievel%20Trace%20ui.png)
+
+### 🔌 MCP Connect Hub
+The read-only **Connect** screen for wiring external agents to the local MCP server — live server status, per-agent connection cards (Claude Desktop, Cursor one-click, Codex, Antigravity IDE, manual), copy-paste configs, and the live tool catalog.
+
+![MCP Connect Screen](docs/screenshots/MCP%20Connect.png)
 
 ### 🎬 Live Demo — Graph Tracing in Action
 Animated GIF showing the full RAG tracing flow with real-time graph node highlighting and answer streaming.
@@ -291,6 +298,16 @@ If you prefer terminal-only operations, you can run RAG queries and ingestion vi
         source .venv/bin/activate
         python -m private_pageindex.cli serve
         ```
+*   **Start the MCP server** (for external agents — see the [MCP Server](#-mcp-server-connect-external-agents) section for details):
+    *   **Windows (PowerShell)**:
+        ```powershell
+        .\.venv\Scripts\python.exe -m private_pageindex.cli serve-mcp
+        ```
+    *   **Linux/macOS (bash)**:
+        ```bash
+        source .venv/bin/activate
+        python -m private_pageindex.cli serve-mcp
+        ```
 
 ---
 
@@ -366,9 +383,20 @@ A console script `private-pageindex-mcp` is also installed (runs stdio).
 
 For clients that cannot pass absolute file paths, drop PDFs into the inbox folder (default `data/inbox/`, configurable via `INBOX_DIR`), then call `ingest_pdf` with the `inbox_filename` argument. Use `list_inbox` to see available files.
 
+### Configuration
+
+MCP behavior is controlled by these `.env` settings (all optional, with working defaults):
+
+| Setting (env var) | Config field | Default | Purpose |
+| --- | --- | --- | --- |
+| `INBOX_DIR` | `inbox_dir` | `data/inbox` | Folder scanned by `list_inbox` / used by `ingest_pdf` filename ingestion. |
+| `MCP_HTTP_HOST` | `mcp_http_host` | `127.0.0.1` | Bind host for `serve-mcp --http`. |
+| `MCP_HTTP_PORT` | `mcp_http_port` | `8765` | Bind port for `serve-mcp --http` (endpoint `/mcp`). |
+| `MCP_AUTH_TOKEN` | `mcp_auth_token` | _(empty)_ | Optional bearer token for the HTTP transport. |
+
 ### Optional HTTP authentication
 
-The HTTP server binds to localhost and is unauthenticated by default. To require a bearer token, set `MCP_AUTH_TOKEN` in your `.env`; clients must then send `Authorization: Bearer <token>`.
+The HTTP server binds to localhost and is unauthenticated by default. To require a bearer token, set `MCP_AUTH_TOKEN` in your `.env`; clients must then send `Authorization: Bearer <token>`. The web Connect screen only reports whether authentication is required — it never exposes the token value.
 
 ### In-app Connect screen
 

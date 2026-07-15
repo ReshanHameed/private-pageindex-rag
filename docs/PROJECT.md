@@ -23,6 +23,17 @@ The project is not a PageIndex Cloud integration and does not call hosted model 
 - Delete indexed documents, chat sessions, and their associated local database/file assets.
 - Check local Ollama reachability through a lightweight status endpoint.
 - Select any available local Ollama model from the web UI for indexing and chat.
+- Expose the pipeline to external agents through a local MCP (Model Context Protocol) server that reuses the same local functions and local Ollama endpoint.
+- Stage PDFs for filename-based ingestion through a local inbox folder (`inbox_dir` / `INBOX_DIR`, default `data/inbox/`).
+- Discover MCP connection details from an in-app, read-only **Connect** screen (`/connect`) that lists the live tool catalog and copy-paste client configs.
+
+## MCP Agent Access
+
+- MCP server module: `private_pageindex/mcp_server.py` (FastMCP), started with the CLI `serve-mcp` command (stdio by default, `--http` for a shared streamable-HTTP instance).
+- Tools exposed to agents: `list_documents`, `get_document`, `get_document_tree`, `list_inbox`, `ingest_pdf`, `get_ingest_status`, `retrieve_context`, `ask`, `delete_document`, `ollama_status`.
+- The MCP server is packaged as an optional extra (`pip install -e .[mcp]`) and a console script (`private-pageindex-mcp`).
+- Web endpoints backing the Connect screen (read-only): `GET /api/mcp/info` and `GET /api/mcp/http-status`.
+- Optional bearer authentication for the HTTP transport via `MCP_AUTH_TOKEN`.
 
 ## V1 Boundaries
 
@@ -33,4 +44,5 @@ The project is not a PageIndex Cloud integration and does not call hosted model 
 - No vector database.
 - No table-specific extraction.
 - No external inference APIs.
+- Local MCP only: the built-in MCP server is in scope, but hosted/cloud MCP servers and hosted inference APIs are not.
 

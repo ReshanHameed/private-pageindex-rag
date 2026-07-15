@@ -43,6 +43,7 @@ Privacy boundary:
 - Feature 8: local FastAPI web app.
 - Feature 9: CLI and final docs.
 - Feature 10: MCP server (`private_pageindex/mcp_server.py`) exposing ingest, list, tree, retrieve-context, ask, delete, status, and inbox tools over stdio and streamable HTTP for external agents (Claude Desktop, Codex, Antigravity IDE).
+- Feature 11: in-app read-only MCP **Connect** screen (`/connect`, `frontend/src/pages/ConnectPage.tsx` + `frontend/src/components/connect/*`) backed by `GET /api/mcp/info` and `GET /api/mcp/http-status`; shows live tool catalog, status, and per-agent copy-paste configs.
 - Later hardening: messy-PDF tree reliability, tree validation reports, duplicate/cover/repeated-header handling, blank-page flags, and title-preserving LLM summary enhancement.
 - Later UX/lifecycle work: background web indexing, stage-based progress bars, elapsed indexing timer, web Ollama model picker, progress status endpoints, and orphan chat/trace cleanup.
 
@@ -90,6 +91,9 @@ Privacy boundary:
 - Default Ollama model: `gemma4:e4b`.
 - Default Ollama URL: `http://localhost:11434`.
 - Default app URL: `http://127.0.0.1:8000`.
+- Default MCP HTTP endpoint: `http://127.0.0.1:8765/mcp` (`mcp_http_host`/`mcp_http_port`).
+- Default inbox folder: `data/inbox/` (`inbox_dir` / `INBOX_DIR`).
+- MCP is an optional extra: `pip install -e .[mcp]` (bundled in `[dev]`); `cli.py` imports `mcp_server` lazily.
 
 ## Verification Baseline
 
@@ -102,6 +106,27 @@ Expected full suite command:
 The latest project docs say the full suite contains 132 tests. Verify this live before reporting it as current.
 
 ## Recent Work Log
+
+### 2026-07-15 - Rebased Connect branch onto origin/main, full verification, docs refresh
+
+What changed:
+- **Rebase**: Rebased `feature/mcp-connect-screen` (15 commits) onto `origin/main` (which had 23 new commits, mostly CodeQL security autofixes). Only `private_pageindex/web/app.py` overlapped; resolved a single import conflict (kept both `import re` from the security fix and `import sys` from the MCP feature). Result: branch is now 0 behind / 15 ahead of `origin/main`, clean tree. Backup branch `backup/mcp-connect-pre-rebase` retained.
+- **Verification**: Backend `pytest` = 132 passed. Frontend `tsc --noEmit`, `npm run lint` (0 errors, 4 pre-existing warnings), and `npm run build` (ConnectPage emitted as its own lazy chunk) all pass. Runtime smoke: `mcp.list_tools()` returns all 10 tools; `/api/mcp/info` → 200 (`installed: true`, 10 tools, token NOT leaked); `/api/mcp/http-status` → 200 (`running: false` when no HTTP server up). Confirmed the rebased `app.py` coherently contains BOTH the CodeQL path-traversal hardening (`_validated_doc_id`, `PurePosixPath` SPA catch-all) and the MCP endpoints.
+- **Docs refresh (for external developers)**: Added MCP + Connect coverage to previously silent/stale docs — `docs/PROJECT.md` (capabilities + MCP Agent Access section + local-MCP boundary note), `docs/STRUCTURE.md` (connect components, ConnectPage, `data/inbox/`, source-folder notes), `docs/TROUBLESHOOTING.md` (fixed stale 116→132 count, added full MCP/Connect diagnostics), `AGENTS.md` (local-MCP allowed clarification, `serve-mcp` + MCP test commands), `.env.example` (`INBOX_DIR`, `MCP_HTTP_HOST`, `MCP_HTTP_PORT`, `MCP_AUTH_TOKEN`, `TREE_PROMPT_COMPACT_THRESHOLD`). Polished `README.md` (Key Features bullets, `serve-mcp` CLI pointer, MCP config table) and `docs/ARCHITECTURE.md` (MCP routes on `web/app.py`, Connect frontend pointer, tool list + config fields).
+- **Graphify**: Re-ran `graphify update .` to refresh the AST knowledge graph after the code changes.
+
+Files changed:
+- `private_pageindex/web/app.py` (rebase conflict resolution only)
+- `README.md`, `docs/PROJECT.md`, `docs/STRUCTURE.md`, `docs/TROUBLESHOOTING.md`, `docs/ARCHITECTURE.md`, `docs/AGENT_MEMORY.md`, `AGENTS.md`, `.env.example`
+
+Verification:
+- Backend pytest: 132 passed.
+- Frontend: `tsc --noEmit` clean, `npm run lint` 0 errors, `npm run build` succeeds.
+- Runtime smoke of MCP tools + Connect endpoints passed (see above).
+
+Decisions / invariants:
+- The pending rebase-onto-`origin/main` follow-up from the previous entry is now DONE.
+- `.env.example` is the source of truth for optional MCP env vars; keep it aligned with `config.py` and the README MCP config table.
 
 ### 2026-07-15 - Added in-app MCP Connect screen
 
@@ -1188,5 +1213,6 @@ Important invariant added:
 
 ## Open Follow-Ups
 
+- `feature/mcp-connect-screen` is rebased and verified but not yet pushed/merged. Next step is Option 2 (push + open PR) or Option 1 (merge to `main`) per the finishing-a-development-branch flow. Backup at `backup/mcp-connect-pre-rebase` can be deleted once the branch is integrated.
 - Consider removing the remote Google Fonts request from the web UI if the user wants a stricter offline-only browser boundary.
 - Consider `llms.txt` only if this project gets published as a documentation website. For a local source repository, `AGENTS.md` is the better primary entry point.
