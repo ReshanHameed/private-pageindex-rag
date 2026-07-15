@@ -56,6 +56,41 @@ def main(argv: list[str] | None = None) -> None:
     mcp_parser.add_argument("--host", type=str, default=None, help="HTTP bind host.")
     mcp_parser.add_argument("--port", type=int, default=None, help="HTTP bind port.")
 
+    # dev
+    dev_parser = subparsers.add_parser(
+        "dev",
+        help="Start Ollama, backend, frontend, and MCP HTTP server together for local development.",
+    )
+    dev_parser.add_argument("--host", type=str, default=None, help="Backend bind host.")
+    dev_parser.add_argument("--port", type=int, default=None, help="Backend bind port.")
+    dev_parser.add_argument(
+        "--mcp-host",
+        type=str,
+        default=None,
+        help="MCP HTTP bind host (default from settings).",
+    )
+    dev_parser.add_argument(
+        "--mcp-port",
+        type=int,
+        default=None,
+        help="MCP HTTP bind port (default from settings).",
+    )
+    dev_parser.add_argument(
+        "--no-frontend",
+        action="store_true",
+        help="Skip the Vite frontend dev server.",
+    )
+    dev_parser.add_argument(
+        "--no-mcp",
+        action="store_true",
+        help="Skip the shared MCP HTTP server.",
+    )
+    dev_parser.add_argument(
+        "--no-ollama",
+        action="store_true",
+        help="Do not start Ollama (use when it is already running elsewhere).",
+    )
+
     args = parser.parse_args(argv)
 
     if args.command == "ingest":
@@ -66,6 +101,16 @@ def main(argv: list[str] | None = None) -> None:
         _cmd_serve(args.host, args.port)
     elif args.command == "serve-mcp":
         _cmd_serve_mcp(args.http, args.host, args.port)
+    elif args.command == "dev":
+        _cmd_dev(
+            host=args.host,
+            port=args.port,
+            mcp_host=args.mcp_host,
+            mcp_port=args.mcp_port,
+            with_frontend=not args.no_frontend,
+            with_mcp_http=not args.no_mcp,
+            with_ollama=not args.no_ollama,
+        )
 
 
 def _cmd_ingest(pdf_path: str) -> None:
@@ -209,6 +254,30 @@ def _cmd_serve_mcp(http: bool, host: str | None, port: int | None) -> None:
     print(file=sys.stderr)
 
     serve_mcp(http=http, host=host, port=port)
+
+
+def _cmd_dev(
+    host: str | None,
+    port: int | None,
+    mcp_host: str | None,
+    mcp_port: int | None,
+    *,
+    with_frontend: bool,
+    with_mcp_http: bool,
+    with_ollama: bool,
+) -> None:
+    """Start Ollama, backend, frontend, and optional MCP HTTP server together."""
+    from private_pageindex.dev_runner import run_dev_stack
+
+    run_dev_stack(
+        host=host,
+        port=port,
+        mcp_host=mcp_host,
+        mcp_port=mcp_port,
+        with_frontend=with_frontend,
+        with_mcp_http=with_mcp_http,
+        with_ollama=with_ollama,
+    )
 
 
 if __name__ == "__main__":

@@ -1,5 +1,28 @@
 # Troubleshooting
 
+## Start Everything (Recommended)
+
+One command starts Ollama (if needed), backend, frontend, and shared MCP HTTP:
+
+```powershell
+.\.venv\Scripts\python.exe -m private_pageindex.cli dev
+```
+
+Or:
+
+```powershell
+.\scripts\dev.ps1
+```
+
+Open **http://localhost:5173**. Press **Ctrl+C** to stop managed services.
+
+Flags:
+- `--no-ollama` — skip starting Ollama (use when the tray app is already running)
+- `--no-frontend` — backend + MCP HTTP only
+- `--no-mcp` — Ollama + backend + frontend only
+
+If ports 8000 or 5173 are in use, stop any manually started backend/frontend first.
+
 ## Run The Full Test Suite
 
 ```powershell
@@ -118,6 +141,57 @@ filename form, the file must exist under the inbox folder (`INBOX_DIR`, default
 
 In stdio mode, stdout is the JSON-RPC channel. The server writes all
 informational logging to stderr; do not expect logs on stdout.
+
+### External Client (e.g. Claude Desktop) Shows "Server disconnected" / `ModuleNotFoundError`
+
+If a desktop client's MCP log shows:
+
+```text
+Error while finding module specification for 'private_pageindex.cli'
+(ModuleNotFoundError: No module named 'private_pageindex')
+```
+
+the package is not importable from the directory the client launches it in.
+Running `serve-mcp` from the project root can hide this because the current
+directory is added to the import path; external clients often launch from a
+different working directory and do **not** reliably honor the config `cwd`
+field. Fix it by installing the package into the venv so it resolves from any
+directory:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e .
+```
+
+Verify it resolves from an unrelated directory:
+
+```powershell
+cd C:\ ; & "D:\Projects\private-pageindex-rag\.venv\Scripts\python.exe" -c "import private_pageindex; print(private_pageindex.__file__)"
+```
+
+Because the launch cwd is unreliable, also pin absolute storage paths in the
+client's MCP entry so it shares the same data as the web app. Example
+`claude_desktop_config.json` entry:
+
+```json
+{
+  "mcpServers": {
+    "private-pageindex-rag": {
+      "command": "D:\\Projects\\private-pageindex-rag\\.venv\\Scripts\\python.exe",
+      "args": ["-m", "private_pageindex.cli", "serve-mcp"],
+      "cwd": "D:\\Projects\\private-pageindex-rag",
+      "env": {
+        "DATA_DIR": "D:\\Projects\\private-pageindex-rag\\data",
+        "INBOX_DIR": "D:\\Projects\\private-pageindex-rag\\data\\inbox"
+      }
+    }
+  }
+}
+```
+
+Fully quit the client (including any tray/background process) and relaunch so it
+re-reads the config and restarts the server. Without absolute `DATA_DIR`, the
+server resolves the relative default (`data/`) against the client's launch
+directory and appears empty because it points at the wrong storage location.
 
 ## Check Ollama
 

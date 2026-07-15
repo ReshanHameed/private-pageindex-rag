@@ -20,6 +20,9 @@ private-pageindex-rag/
   .gitignore
   Dockerfile
   docker-compose.yml
+  scripts/
+    dev.ps1
+    dev.sh
   docs/
     ARCHITECTURE.md
     DESIGN.md
@@ -66,6 +69,7 @@ private-pageindex-rag/
     storage.py
     documents.py
     mcp_server.py
+    dev_runner.py
     cli.py
     __main__.py
     indexing/
@@ -93,6 +97,8 @@ private-pageindex-rag/
 
 - `private_pageindex/` is the Python backend package.
 - `private_pageindex/mcp_server.py` is the optional MCP server (FastMCP) exposing the pipeline to external agents. It is installed through the `[mcp]` optional extra and also registered as the `private-pageindex-mcp` console script.
+- `private_pageindex/dev_runner.py` implements the `cli dev` orchestrator: starts Ollama (when not already reachable), backend (uvicorn), frontend (Vite), and shared MCP HTTP as child processes.
+- `scripts/dev.ps1` and `scripts/dev.sh` are thin wrappers around `python -m private_pageindex.cli dev`.
 - `private_pageindex/documents.py` holds the shared document deletion cascade used by both the web app and the MCP server.
 - `frontend/src/pages/ConnectPage.tsx` and `frontend/src/components/connect/` implement the in-app MCP **Connect** screen.
 - `frontend/` is the React SPA client application.

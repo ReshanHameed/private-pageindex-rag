@@ -43,6 +43,7 @@ This repository is intended to be worked on by AI coding agents. Read this file 
 .\.venv\Scripts\python.exe -m uvicorn private_pageindex.web.app:app --reload --host 127.0.0.1 --port 8000
 .\.venv\Scripts\python.exe -m private_pageindex.cli serve
 .\.venv\Scripts\python.exe -m private_pageindex.cli serve-mcp
+.\.venv\Scripts\python.exe -m private_pageindex.cli dev
 .\.venv\Scripts\python.exe -m private_pageindex.cli serve-mcp --http --host 127.0.0.1 --port 8765
 ```
 
@@ -56,6 +57,7 @@ python -m pytest tests/test_mcp_server.py -v
 python -m uvicorn private_pageindex.web.app:app --reload --host 127.0.0.1 --port 8000
 python -m private_pageindex.cli serve
 python -m private_pageindex.cli serve-mcp
+python -m private_pageindex.cli dev
 python -m private_pageindex.cli serve-mcp --http --host 127.0.0.1 --port 8765
 ```
 
