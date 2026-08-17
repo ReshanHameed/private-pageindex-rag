@@ -108,6 +108,22 @@ The latest project docs say the full suite contains 132 tests. Verify this live 
 
 ## Recent Work Log
 
+### 2026-08-17 - Fixed 7+ frontend security advisories
+
+What changed:
+- **Dependencies**: Consolidated and fixed 7+ security advisories flagged by Dependabot (including React Router, PostCSS, brace-expansion, and nanoid).
+- **PRs**: Created a single PR (#24) to replace and close the two failing Dependabot PRs (#21 and #22).
+- **Process**: `main` branch protections required opening a PR instead of pushing directly. Verified changes locally with `npm run build`, `npm run lint`, and `pytest -v`.
+
+Files changed:
+- `frontend/package.json`, `frontend/package-lock.json`
+
+Verification:
+- Backend pytest: 134 passed.
+- Frontend lint: 0 errors (4 warnings).
+- Frontend build: passes.
+- PR #24 opened.
+
 ### 2026-07-15 - Docs refresh + Graphify update (dev stack, Connect UI, MCP fixes)
 
 What changed:
